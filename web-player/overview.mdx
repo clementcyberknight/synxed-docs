@@ -1,7 +1,7 @@
 ---
-title: "Built-In Web Player Overview (SynxedWebPlayer)"
+title: "Built-In Web Player: Mount and Play Music Instantly"
 sidebarTitle: "Overview"
-description: "Mount a fully featured music player with play/pause, skip, artwork, ads UI, and resume behavior in a single function call."
+description: "Mount a fully-featured licensed music player — play/pause, skip, artwork, ads UI, and resume — with a single SynxedWebPlayer.mount() call."
 ---
 
 `SynxedWebPlayer` gives you a complete, ready-to-use player UI without building any controls yourself. It includes play/pause, skip, voice hold, ads UI, track artwork, track labels, and built-in resume behavior out of the box. You call `SynxedWebPlayer.mount()` with your API key and a source, and the player renders immediately — either floating above your page or anchored inside a container you choose.
@@ -120,20 +120,6 @@ SynxedWebPlayer.mount({
   serverUrl: "https://staging-api.example.com",
   source: { type: "playlist", playlistCode: "sxpl_YOUR_CODE" },
 });
-```
-
-## Destroying the Player
-
-The `mount()` call returns a player instance. Call `destroy()` on it when you need to unmount the player and clean up — for example, during a route change in a single-page application.
-
-```ts
-const player = SynxedWebPlayer.mount({
-  apiKey: "YOUR_SYNXED_API_KEY",
-  source: { type: "playlist", playlistCode: "sxpl_YOUR_CODE" },
-});
-
-// Later, when you no longer need the player:
-player.destroy();
 ```
 
 ## Next Steps

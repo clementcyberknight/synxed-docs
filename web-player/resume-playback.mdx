@@ -1,5 +1,5 @@
 ---
-title: "Resume Playback Across Page Refreshes"
+title: "Resume Playback: Restore Listener Position After Refresh"
 sidebarTitle: "Resume Playback"
 description: "Automatically restore a listener's position in a song or playlist after a page refresh, with full control over when resume is active."
 ---
@@ -43,7 +43,7 @@ Not every source type can be resumed. Live and scheduled streams are always join
 | Scheduled Station | ❌ No | Always joins at the current scheduled position. |
 
 <Note>
-  The SDK stores only playback metadata — track ID, timestamp, and queue state. It never stores your API key, audio files, or any personal listener data in the checkpoint.
+  The SDK stores only playback metadata — track ID, timestamp, and queue state. It never stores your API key or audio files in the checkpoint.
 </Note>
 
 ## How Checkpoints Work
@@ -70,11 +70,9 @@ If you are building your own player controls with `SynxedPlayer` instead of usin
     Pass an identifier that stays constant for the same user across page loads — such as a database user ID or a persistent session token.
 
     ```ts
-    const listenerId = "user_123";
-
     await player.playPlaylist({
       playlistCode: "sxpl_YOUR_CODE",
-      listenerId,
+      listenerId: "user_123",
     });
     ```
   </Step>

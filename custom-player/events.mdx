@@ -1,5 +1,5 @@
 ---
-title: "SynxedPlayer Events Reference"
+title: "SynxedPlayer Events Reference — All Events and Payloads"
 sidebarTitle: "Events"
 description: "Complete reference for all SynxedPlayer events: playback state, track changes, queue updates, connection status, errors, and voice commands."
 ---
@@ -163,7 +163,7 @@ Voice events fire when the voice command pipeline is active. Enable it by passin
 
 ### `voiceStateChange`
 
-Fires when the internal voice pipeline state changes — for example, moving from idle to listening, or from listening to processing.
+Fires when the voice pipeline state changes — for example, moving from idle to listening, or from listening to processing.
 
 ```ts
 player.on("voiceStateChange", (state) => {

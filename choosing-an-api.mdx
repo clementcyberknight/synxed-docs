@@ -1,5 +1,5 @@
 ---
-title: "SynxedWebPlayer vs SynxedPlayer: Which to Use"
+title: "SynxedWebPlayer vs SynxedPlayer: Choosing the Right API"
 sidebarTitle: "Choosing an API"
 description: "Compare SynxedWebPlayer and SynxedPlayer to decide which Synxed API fits your use case — from drop-in players to fully custom audio interfaces."
 ---
@@ -88,14 +88,20 @@ Use **`SynxedPlayer`** when:
       document.getElementById("track-artist").textContent = track.artist;
     });
 
+    let isPlaying = false;
     player.on("stateChanged", (state) => {
+      isPlaying = state === "playing";
       const btn = document.getElementById("play-btn");
-      btn.textContent = state === "playing" ? "Pause" : "Play";
+      btn.textContent = isPlaying ? "Pause" : "Play";
     });
 
     // Wire up your own controls:
     document.getElementById("play-btn").addEventListener("click", () => {
-      player.togglePlay();
+      if (isPlaying) {
+        player.pause();
+      } else {
+        player.resume();
+      }
     });
 
     // Release resources on cleanup:

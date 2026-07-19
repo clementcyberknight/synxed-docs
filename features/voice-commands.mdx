@@ -146,6 +146,11 @@ player.on("voiceSpeechStart", () => {
 player.on("voiceSpeechEnd", () => {
   console.log("User stopped speaking");
 });
+
+// Fires when the user's speaking state changes (e.g. speaking → silent)
+player.on("voiceUserSpeakingChange", (isSpeaking) => {
+  console.log("User is speaking:", isSpeaking);
+});
 ```
 
 <CardGroup cols={2}>
@@ -160,6 +165,9 @@ player.on("voiceSpeechEnd", () => {
   </Card>
   <Card title="voiceSpeechEnd" icon="stop">
     Emitted when the user stops speaking. If `autoEndOnSilence` is enabled, capture ends automatically at this point.
+  </Card>
+  <Card title="voiceUserSpeakingChange" icon="microphone">
+    Emitted whenever the user's speaking state changes. Receives a boolean indicating whether the user is currently speaking — useful for animating a mic indicator in real time.
   </Card>
 </CardGroup>
 

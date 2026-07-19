@@ -1,5 +1,5 @@
 ---
-title: "Synxed: Licensed Music Playback for Your App"
+title: "Synxed: Add Licensed Music Playback to Your Web App"
 sidebarTitle: "Home"
 description: "Add licensed music — songs, playlists, mixes, live radio, and scheduled stations — to any website, game, or app with the Synxed SDK."
 ---
@@ -39,7 +39,7 @@ Synxed authenticates your app with an API key from the [Synxed Portal](https://p
     import "synxed-sdk/player.css";
     import { SynxedWebPlayer } from "synxed-sdk";
 
-    SynxedWebPlayer.mount({
+    const player = SynxedWebPlayer.mount({
       apiKey: "YOUR_SYNXED_API_KEY",
       source: { type: "playlist", playlistCode: "sxpl_YOUR_CODE" },
     });

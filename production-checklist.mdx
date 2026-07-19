@@ -1,5 +1,5 @@
 ---
-title: "Production Checklist for the Synxed SDK"
+title: "Synxed SDK Pre-Launch Production Readiness Checklist"
 sidebarTitle: "Checklist"
 description: "A grouped checklist of everything you should verify before shipping a Synxed SDK integration to production, with explanations for each item."
 ---
@@ -104,14 +104,16 @@ Before you go live, run through this checklist to make sure your Synxed integrat
 <Steps>
 
   <Step title="Use a stable listenerId for resumable sessions">
-    If you enable `resumePlayback`, the SDK saves a checkpoint tied to the `listenerId` you provide. Use an ID that is consistent across sessions for the same user — such as a hashed user ID or a persisted device token. A new random ID on every page load means the resume checkpoint is never found.
+    If you enable `resumePlayback`, the SDK saves a checkpoint tied to the `listenerId` you provide on each play call. Use an ID that is consistent across sessions for the same user — such as a hashed user ID or a persisted device token. A new random ID on every page load means the resume checkpoint is never found.
 
     ```js
     const player = new SynxedPlayer({
       apiKey: "YOUR_SYNXED_API_KEY",
-      listenerId: "user-stable-id-here",
       resumePlayback: true,
     });
+
+    // Pass the same listenerId on every play call to enable resumption
+    player.playPlaylist({ playlistCode: "YOUR_PLAYLIST_CODE", listenerId: "user-stable-id-here" });
     ```
   </Step>
 
@@ -135,8 +137,11 @@ Before you go live, run through this checklist to make sure your Synxed integrat
     If you fetch metadata for a live radio station (such as the current track title or artwork), do not poll more frequently than once every 10–15 seconds. Excessive polling increases load on the metadata service and provides no meaningful benefit — track changes on live radio do not happen faster than that in practice.
 
     ```js
-    setInterval(() => {
-      player.getRadioMetadata().then(updateNowPlaying);
+    import { fetchRadioNowPlaying } from "synxed-sdk";
+
+    setInterval(async () => {
+      const nowPlaying = await fetchRadioNowPlaying("https://your-synxed-server.com");
+      if (nowPlaying) updateNowPlaying(nowPlaying);
     }, 12000); // 12 seconds — within the recommended range
     ```
   </Step>
@@ -161,8 +166,11 @@ Before you go live, run through this checklist to make sure your Synxed integrat
     Voice capture must be initiated from a user gesture for the same reason as autoplay — browsers require a direct interaction before granting microphone access. Do not attempt to start voice capture on page load or from a timer. Wire it to a button click or equivalent interaction.
 
     ```js
-    document.getElementById("mic-button").addEventListener("click", () => {
-      player.startVoice();
+    document.getElementById("mic-button").addEventListener("pointerdown", () => {
+      player.beginVoiceHold({ listenerId: "YOUR_LISTENER_ID" });
+    });
+    document.getElementById("mic-button").addEventListener("pointerup", () => {
+      player.endVoiceHold();
     });
     ```
   </Step>

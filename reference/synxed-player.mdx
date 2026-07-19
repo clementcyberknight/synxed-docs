@@ -1,5 +1,5 @@
 ---
-title: "SynxedPlayer — Programmatic Playback Control API"
+title: "SynxedPlayer Class: Programmatic Playback Control API"
 sidebarTitle: "SynxedPlayer"
 description: "Construct and control a headless Synxed playback session. Full access to play methods, transport controls, ad controls, voice hold, and player events."
 ---
@@ -49,7 +49,7 @@ Constructs a new player instance. The player does not start playing or connect t
   `"tv"`). Used for analytics and adaptive bitrate decisions on the server.
 </ParamField>
 
-<ParamField body="voice" type="Omit<VoiceHoldOptions, 'listenerId'>">
+<ParamField body="voice" type="object">
   Voice-hold configuration for this player instance.
 
   <Expandable title="Voice fields">

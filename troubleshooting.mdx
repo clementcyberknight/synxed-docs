@@ -1,5 +1,5 @@
 ---
-title: "Troubleshooting Common Synxed SDK Issues"
+title: "Troubleshooting Common Synxed SDK Integration Issues"
 sidebarTitle: "Troubleshooting"
 description: "Diagnose and fix the most common issues you may encounter when integrating the Synxed SDK, from invisible players to voice capture failures."
 ---
@@ -95,9 +95,11 @@ If something is not working as expected, this page walks you through the most co
     ```js
     const player = new SynxedPlayer({
       apiKey: "YOUR_SYNXED_API_KEY",
-      listenerId: "listener-abc-123",
       resumePlayback: true,
     });
+
+    // Pass the same listenerId on every play call to enable resumption
+    player.playPlaylist({ playlistCode: "YOUR_PLAYLIST_CODE", listenerId: "listener-abc-123" });
     ```
 
     <Note>
@@ -118,17 +120,20 @@ If something is not working as expected, this page walks you through the most co
 
     - Voice was triggered from a **user gesture** (click, tap, or keypress)
     - The user has granted **microphone permission** in the browser
-    - You have not set `enableVoice: false` or `voice.enabled: false` in your configuration
+    - You have not set `voice.enabled: false` in your configuration
     - Your app is running in a **browser environment** that exposes microphone APIs (voice is not available in Node.js or non-browser runtimes)
 
     ```js
     const player = new SynxedPlayer({
       apiKey: "YOUR_SYNXED_API_KEY",
-      enableVoice: true,
+      voice: { enabled: true },
     });
 
-    document.getElementById("mic-button").addEventListener("click", () => {
-      player.startVoice();
+    document.getElementById("mic-button").addEventListener("pointerdown", () => {
+      player.beginVoiceHold({ listenerId: "YOUR_LISTENER_ID" });
+    });
+    document.getElementById("mic-button").addEventListener("pointerup", () => {
+      player.endVoiceHold();
     });
     ```
 

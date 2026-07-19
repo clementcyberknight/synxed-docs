@@ -1,7 +1,7 @@
 ---
-title: "Customizing Web Player Appearance & Layout"
+title: "Web Player Appearance: Modes, Positioning, and Theming"
 sidebarTitle: "Appearance"
-description: "Control the player's mode, size, screen position, drag behavior, theme colors, and CSS class from a single mount options object."
+description: "Control the SynxedWebPlayer's layout mode, width, viewport position, drag behavior, color theme, and CSS hooks from a single options object."
 ---
 
 Every visual aspect of `SynxedWebPlayer` is configurable through the options you pass to `SynxedWebPlayer.mount()`. You can switch between three layout modes, constrain the player's width, pin it to any corner of the viewport, let listeners drag it around, and match your brand with a custom color theme — all without writing any CSS from scratch.
@@ -100,7 +100,7 @@ SynxedWebPlayer.mount({
 
 ## Theme
 
-The player uses a gold accent color by default. Set `theme.accent` to your brand color and the SDK automatically derives sensible defaults for the border, live indicator dot, and glow. Override any of those derived values individually when you need them to differ.
+Set `theme.accent` to your brand color and the SDK automatically derives sensible defaults for the border, live indicator dot, and glow. Override any of those derived values individually when you need them to differ.
 
 ### Core Colors
 
