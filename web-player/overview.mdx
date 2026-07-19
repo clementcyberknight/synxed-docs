@@ -1,0 +1,148 @@
+---
+title: "Built-In Web Player Overview (SynxedWebPlayer)"
+sidebarTitle: "Overview"
+description: "Mount a fully featured music player with play/pause, skip, artwork, ads UI, and resume behavior in a single function call."
+---
+
+`SynxedWebPlayer` gives you a complete, ready-to-use player UI without building any controls yourself. It includes play/pause, skip, voice hold, ads UI, track artwork, track labels, and built-in resume behavior out of the box. You call `SynxedWebPlayer.mount()` with your API key and a source, and the player renders immediately — either floating above your page or anchored inside a container you choose.
+
+## Prerequisites
+
+Before mounting the player, import the bundled stylesheet. Without it, the player renders without layout or visual styles.
+
+```ts
+import "synxed-sdk/player.css";
+import { SynxedWebPlayer } from "synxed-sdk";
+```
+
+<Note>
+  Import `synxed-sdk/player.css` once at your application's entry point. Importing it multiple times is harmless but unnecessary.
+</Note>
+
+## Choosing a Source
+
+`SynxedWebPlayer` supports three source types. Pick the one that matches what you want to play.
+
+<Tabs>
+  <Tab title="Playlist">
+    Play an ordered collection of licensed tracks. The player resumes from the listener's last position after a page refresh by default.
+
+    ```ts
+    import "synxed-sdk/player.css";
+    import { SynxedWebPlayer } from "synxed-sdk";
+
+    const player = SynxedWebPlayer.mount({
+      apiKey: "YOUR_SYNXED_API_KEY",
+      source: { type: "playlist", playlistCode: "sxpl_YOUR_CODE" },
+    });
+    ```
+  </Tab>
+  <Tab title="Song">
+    Play a single track. Useful for preview players or focused listening experiences.
+
+    ```ts
+    import "synxed-sdk/player.css";
+    import { SynxedWebPlayer } from "synxed-sdk";
+
+    const player = SynxedWebPlayer.mount({
+      apiKey: "YOUR_SYNXED_API_KEY",
+      source: { type: "song", songId: "SYNX_EX_SONG_ID" },
+    });
+    ```
+  </Tab>
+  <Tab title="Live Radio">
+    Tune into a live radio stream. The player always joins the stream at its current live position.
+
+    ```ts
+    import "synxed-sdk/player.css";
+    import { SynxedWebPlayer } from "synxed-sdk";
+
+    const player = SynxedWebPlayer.mount({
+      apiKey: "YOUR_SYNXED_API_KEY",
+      source: { type: "radio" },
+    });
+    ```
+
+    <Note>
+      Live radio does not resume from an old playback timestamp after a page refresh. The stream always starts at the current live position.
+    </Note>
+  </Tab>
+</Tabs>
+
+## Mounting the Player
+
+### Floating Player (Default)
+
+When you omit the `container` option, the SDK creates a floating root element and appends it directly to `document.body`. This is the quickest way to get a player on screen.
+
+```ts
+const player = SynxedWebPlayer.mount({
+  apiKey: "YOUR_SYNXED_API_KEY",
+  source: { type: "playlist", playlistCode: "sxpl_YOUR_CODE" },
+});
+```
+
+### Inside a Container Element
+
+Pass a DOM element as `container` to render the player inside a specific part of your page layout. This gives you full control over the player's position in the document flow.
+
+<Steps>
+  <Step title="Add the container element to your HTML">
+    ```html
+    <div id="music-player"></div>
+    ```
+  </Step>
+  <Step title="Select the container and mount">
+    ```ts
+    const container = document.getElementById("music-player");
+    if (!container) throw new Error("Missing #music-player container");
+
+    const player = SynxedWebPlayer.mount({
+      container,
+      apiKey: "YOUR_SYNXED_API_KEY",
+      source: { type: "playlist", playlistCode: "sxpl_YOUR_CODE" },
+    });
+    ```
+  </Step>
+</Steps>
+
+<Tip>
+  When you supply a `container`, the player is positioned in your normal document flow. Placement and dragging options only apply to the floating (no-container) configuration.
+</Tip>
+
+## Using a Custom Backend URL
+
+For staging or testing environments you can point the SDK at a different API endpoint using `serverUrl`. Production integrations do not normally need this option.
+
+```ts
+SynxedWebPlayer.mount({
+  apiKey: "YOUR_SYNXED_API_KEY",
+  serverUrl: "https://staging-api.example.com",
+  source: { type: "playlist", playlistCode: "sxpl_YOUR_CODE" },
+});
+```
+
+## Destroying the Player
+
+The `mount()` call returns a player instance. Call `destroy()` on it when you need to unmount the player and clean up — for example, during a route change in a single-page application.
+
+```ts
+const player = SynxedWebPlayer.mount({
+  apiKey: "YOUR_SYNXED_API_KEY",
+  source: { type: "playlist", playlistCode: "sxpl_YOUR_CODE" },
+});
+
+// Later, when you no longer need the player:
+player.destroy();
+```
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Appearance" icon="palette" href="/web-player/appearance">
+    Customize the player mode, width, position, theme colors, and more.
+  </Card>
+  <Card title="Resume Playback" icon="rotate-right" href="/web-player/resume-playback">
+    Learn how the player saves and restores a listener's position across page refreshes.
+  </Card>
+</CardGroup>

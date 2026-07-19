@@ -1,47 +1,107 @@
 ---
-title: "Quickstart"
-description: "Begin with a guide on the fastest path to a successful outcome"
+title: "Get Started with Synxed in Minutes"
+sidebarTitle: "Quickstart"
+description: "Install the Synxed SDK, grab your API key, and have licensed music playing in your app with just a few lines of TypeScript."
 ---
 
-Describe how someone begins using your product. What is the first thing they need to do? Are there any prerequisites?
-
-A quickstart should take someone from zero to using your product. They'll get a quick win and a sense of what they can accomplish.
-
-## Prerequisites
-
-Before you begin, you must have:
-
-- Requirement one (for example, Node.js 18+, a free account, an API key)
-- Requirement two (for example, a compatible device, a compatible browser, a compatible operating system)
-
-## Get started
+This guide walks you through the fastest path to licensed music playback in your app. By the end, you'll have a working player mounted on your page that streams a playlist — no custom UI required. The entire integration takes fewer than five minutes.
 
 <Steps>
-  <Step title="Install">
-    Describe how to install your product or sign up.
+
+  <Step title="Get your API key">
+    Sign in to the [Synxed portal](https://portal.synxed.com) and copy your API key from the dashboard. Every request the SDK makes is authenticated with this key, so keep it out of public version control.
+
+    <Warning>
+      Never hard-code your API key into a public repository. Use an environment variable such as `VITE_SYNXED_API_KEY` or `NEXT_PUBLIC_SYNXED_API_KEY` to inject it at build time.
+    </Warning>
+  </Step>
+
+  <Step title="Install the SDK">
+    Add the Synxed SDK to your project with npm:
 
     ```bash
-    npm install your-package
+    npm install synxed-sdk
     ```
-  </Step>
-  <Step title="Configure">
-    Describe any setup or configuration needed before first use.
 
-    ```bash
-    your-cli init
-    ```
+    The package ships both CommonJS and ESM builds, so it works with Vite, webpack, Next.js, and any other modern bundler without extra configuration.
   </Step>
-  <Step title="Run it">
-    Show the first thing a user does to see it working.
 
-    ```bash
-    your-cli start
+  <Step title="Import the player stylesheet">
+    If you plan to use the built-in player UI, import the stylesheet once at the top level of your app — typically in your root component or entry file:
+
+    ```ts
+    import "synxed-sdk/player.css";
     ```
+
+    <Note>
+      This CSS import is **required** for the built-in `SynxedWebPlayer` UI to render correctly. The SDK ships styles as a standalone CSS file for strict Content Security Policy (CSP) compatibility and does not inject any runtime `<style>` tags automatically.
+    </Note>
   </Step>
+
+  <Step title="Mount the player">
+    Call `SynxedWebPlayer.mount()` with your API key and a playable source. The example below plays a playlist and attaches a floating player to your page:
+
+    ```ts
+    import "synxed-sdk/player.css";
+    import { SynxedWebPlayer } from "synxed-sdk";
+
+    const player = SynxedWebPlayer.mount({
+      apiKey: process.env.SYNXED_API_KEY,
+      source: {
+        type: "playlist",
+        playlistCode: "sxpl_YOUR_CODE",
+      },
+    });
+    ```
+
+    Replace `sxpl_YOUR_CODE` with the playlist code from your Synxed dashboard. You can also use a `type: "song"`, `type: "radio"`, or any other supported source type.
+  </Step>
+
+  <Step title="Destroy the player on unmount">
+    When the component or page that owns the player is torn down, call `player.destroy()` to stop playback and release all resources:
+
+    ```ts
+    // React example
+    useEffect(() => {
+      const player = SynxedWebPlayer.mount({
+        apiKey: process.env.SYNXED_API_KEY,
+        source: {
+          type: "playlist",
+          playlistCode: "sxpl_YOUR_CODE",
+        },
+      });
+
+      return () => {
+        player.destroy();
+      };
+    }, []);
+    ```
+
+    Always call `destroy()` on cleanup. Skipping it can cause stale audio contexts, duplicate players, or memory leaks — especially in single-page apps where the DOM persists between route changes.
+  </Step>
+
 </Steps>
 
-<Tip>
-  Give people a way to get help. This could be a link to a support page, a chat with a customer support agent, or a forum for your product.
+## Complete Working Example
 
-  Example: Need help? Reach out to us at [support@yourcompany.com](mailto:support@yourcompany.com).
+Here's the full integration in a single TypeScript file, ready to copy into your project:
+
+```ts
+import "synxed-sdk/player.css";
+import { SynxedWebPlayer } from "synxed-sdk";
+
+const player = SynxedWebPlayer.mount({
+  apiKey: process.env.SYNXED_API_KEY,
+  source: {
+    type: "playlist",
+    playlistCode: "sxpl_YOUR_CODE",
+  },
+});
+
+// Call this when the page or component unmounts:
+player.destroy();
+```
+
+<Tip>
+  Need a custom player UI, or want to play mixes and scheduled stations? Switch to `SynxedPlayer` — the low-level API that gives you full control over playback state, events, and rendering. See the [SynxedPlayer overview](/custom-player/overview) to get started.
 </Tip>

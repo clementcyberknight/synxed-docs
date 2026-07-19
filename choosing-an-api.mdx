@@ -1,0 +1,115 @@
+---
+title: "SynxedWebPlayer vs SynxedPlayer: Which to Use"
+sidebarTitle: "Choosing an API"
+description: "Compare SynxedWebPlayer and SynxedPlayer to decide which Synxed API fits your use case — from drop-in players to fully custom audio interfaces."
+---
+
+Synxed ships two distinct APIs for adding music to your app. Both can play songs, playlists, and live radio, but they differ significantly in how much UI control they hand you and which advanced content types they support. Picking the right one upfront saves you from reworking your integration later.
+
+## The Two APIs at a Glance
+
+**`SynxedWebPlayer`** is a drop-in solution. You call `SynxedWebPlayer.mount()`, pass your API key and a source, and a fully styled floating player appears on your page. You don't write any UI code — Synxed handles the controls, layout, and visual state for you. This is the fastest path to production.
+
+**`SynxedPlayer`** is the low-level API. It gives you raw access to playback state, events, and controls so you can build whatever interface your app demands — a mini bar at the bottom of a game screen, an inline player inside a feed card, a voice-only interface, or anything else. You own the UI entirely.
+
+## When to Use Each API
+
+Use **`SynxedWebPlayer`** when:
+- You want music playing on your site as quickly as possible
+- A floating or mini player fits your design without customisation
+- You're prototyping or validating a feature before investing in a custom UI
+
+Use **`SynxedPlayer`** when:
+- Your app requires a custom-designed player interface
+- You need to play **mixes** or **scheduled stations** (not yet exposed directly by `SynxedWebPlayer`)
+- You want granular control over playback events, ad state, or voice commands
+- You're building a game or app shell where a floating player would feel out of place
+
+<Note>
+  `SynxedPlayer` is the only option for mixes and scheduled stations. `SynxedWebPlayer` does not yet expose these content types directly. If your use case requires either, start with `SynxedPlayer` from the beginning.
+</Note>
+
+## API Choice Reference
+
+| Goal | Recommended API |
+|------|----------------|
+| Add a floating player quickly | `SynxedWebPlayer` |
+| Add a mini player button | `SynxedWebPlayer` |
+| Build your own controls | `SynxedPlayer` |
+| Play one song | Either |
+| Play a playlist | Either |
+| Play live radio | Either |
+| Play a mix | `SynxedPlayer` |
+| Play a scheduled station | `SynxedPlayer` |
+| Fetch stations, schedules, or mixes | Discovery helpers |
+| Voice commands | Either |
+
+## Code Examples
+
+<Tabs>
+  <Tab title="SynxedWebPlayer">
+    Mount the built-in floating player with your API key and a playlist source. Import the stylesheet first — it's required for the UI to render.
+
+    ```ts
+    import "synxed-sdk/player.css";
+    import { SynxedWebPlayer } from "synxed-sdk";
+
+    const player = SynxedWebPlayer.mount({
+      apiKey: process.env.SYNXED_API_KEY,
+      source: {
+        type: "playlist",
+        playlistCode: "sxpl_YOUR_CODE",
+      },
+    });
+
+    // Release resources when the page or component unmounts:
+    player.destroy();
+    ```
+
+    The player mounts itself into the DOM and manages its own lifecycle. You don't write any HTML or handle UI state — just mount and destroy.
+  </Tab>
+  <Tab title="SynxedPlayer">
+    Use `SynxedPlayer` when you need full control over the interface. You subscribe to playback events and update your own UI in response.
+
+    ```ts
+    import { SynxedPlayer } from "synxed-sdk";
+
+    const player = new SynxedPlayer({
+      apiKey: process.env.SYNXED_API_KEY,
+      source: {
+        type: "station",
+        stationId: "SYNX_STATION_ID",
+      },
+    });
+
+    // Subscribe to playback state changes and update your UI:
+    player.on("trackChanged", (track) => {
+      document.getElementById("track-title").textContent = track.title;
+      document.getElementById("track-artist").textContent = track.artist;
+    });
+
+    player.on("stateChanged", (state) => {
+      const btn = document.getElementById("play-btn");
+      btn.textContent = state === "playing" ? "Pause" : "Play";
+    });
+
+    // Wire up your own controls:
+    document.getElementById("play-btn").addEventListener("click", () => {
+      player.togglePlay();
+    });
+
+    // Release resources on cleanup:
+    player.destroy();
+    ```
+
+    With `SynxedPlayer`, your markup, styles, and interaction logic are entirely your own. The SDK handles audio, licensing, and state — you handle everything the user sees.
+  </Tab>
+</Tabs>
+
+## Mental Model
+
+For most apps, the decision is straightforward: **start with `SynxedWebPlayer`**. It covers songs, playlists, and live radio with zero UI work. If you later need a custom interface, mixes, or scheduled stations, migrate to `SynxedPlayer` — the core concepts (API key, source types, destroy on unmount) carry over directly.
+
+<Tip>
+  Not sure which content types you need yet? Start with `SynxedWebPlayer`. You can always drop down to `SynxedPlayer` later without changing how you authenticate or how you define sources.
+</Tip>

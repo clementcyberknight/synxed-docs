@@ -1,0 +1,115 @@
+{
+  "projectType": "sdk-library",
+  "projectName": "Synxed",
+  "projectDescription": "A JavaScript/TypeScript SDK that lets developers add licensed music playback — songs, playlists, mixes, live radio, and scheduled stations — to websites, games, and apps.",
+  "theme": "luma",
+  "primaryColor": "#ef7025",
+  "lightColor": "#eec9bc",
+  "darkColor": "#4fa1ab",
+  "navigation": {
+    "tabs": [
+      {
+        "tab": "Documentation",
+        "groups": [
+          {
+            "group": "Get Started",
+            "pages": [
+              "introduction",
+              "quickstart",
+              "choosing-an-api"
+            ]
+          },
+          {
+            "group": "Built-In Player",
+            "pages": [
+              "web-player/overview",
+              "web-player/appearance",
+              "web-player/resume-playback"
+            ]
+          },
+          {
+            "group": "Custom Player",
+            "pages": [
+              "custom-player/overview",
+              "custom-player/playback-controls",
+              "custom-player/ads",
+              "custom-player/events"
+            ]
+          },
+          {
+            "group": "Features",
+            "pages": [
+              "features/voice-commands",
+              "features/discovery",
+              "features/radio-now-playing"
+            ]
+          },
+          {
+            "group": "Framework Guides",
+            "pages": [
+              "frameworks/react",
+              "frameworks/nextjs",
+              "frameworks/vue",
+              "frameworks/plain-html"
+            ]
+          },
+          {
+            "group": "Help",
+            "pages": [
+              "troubleshooting",
+              "production-checklist"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "SDK Reference",
+        "groups": [
+          {
+            "group": "Reference",
+            "pages": [
+              "reference/synxed-web-player",
+              "reference/synxed-player",
+              "reference/types",
+              "reference/errors",
+              "reference/discovery-helpers"
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "keyFeatures": [
+    "Drop-in floating player UI with play/pause, skip, ads, artwork, and resume",
+    "Low-level SynxedPlayer API for fully custom player UIs",
+    "Songs, playlists, curated mixes, live radio, and scheduled stations",
+    "Resumable playback with stable listener IDs",
+    "Voice command support with hold-to-speak interaction",
+    "Ad playback with skip countdowns and companion banners",
+    "Discovery helpers for fetching stations, mixes, and schedules",
+    "React, Next.js, Vue, and plain-HTML integrations",
+    "Fully typed TypeScript API"
+  ],
+  "publicApiSurface": [
+    "SynxedWebPlayer.mount(options)",
+    "SynxedWebPlayer.destroy()",
+    "new SynxedPlayer(config)",
+    "player.playSong(options)",
+    "player.playPlaylist(options)",
+    "player.playMix(options)",
+    "player.playRadio(options)",
+    "player.playStation(options)",
+    "player.pause() / player.resume() / player.stop()",
+    "player.skip() / player.previous() / player.skipTo(index)",
+    "player.seek(ms) / player.setVolume(volume)",
+    "player.on(event, handler)",
+    "player.beginVoiceHold(options) / player.endVoiceHold() / player.cancelVoiceHold()",
+    "player.canSkipAd() / player.skipAd() / player.clickAd()",
+    "player.dismissVoiceAndResume()",
+    "fetchMixes(serverUrl, options)",
+    "fetchStations(serverUrl, options)",
+    "fetchStationSchedule(serverUrl, stationId, options)",
+    "fetchRadioNowPlaying(serverUrl)",
+    "SynxedError / SynxedConfigurationError / SynxedConnectionError / SynxedPlaybackError / SynxedProtocolError"
+  ]
+}

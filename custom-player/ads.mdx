@@ -1,0 +1,193 @@
+---
+title: "Handling Ads in SynxedPlayer"
+sidebarTitle: "Ads"
+description: "Listen to ad events in SynxedPlayer to build companion banners, skip countdowns, and ad state displays in your custom music player UI."
+---
+
+During playback, Synxed may schedule audio ads. The SDK surfaces ad lifecycle through events so you can show companion banners, render a skip countdown, and keep your player UI in the correct state while an ad is active. You never need to poll — every state transition fires an event.
+
+## Ad events
+
+Three events cover the full ad lifecycle: when an ad starts, while the skip countdown ticks, and when the ad ends.
+
+### `adStart`
+
+Fires immediately when an ad begins. The payload gives you everything you need to render a companion banner alongside the audio.
+
+```ts
+player.on("adStart", (ad) => {
+  console.log(ad.campaignName);       // Name of the advertiser / campaign
+  console.log(ad.companionBannerUrl); // URL of the companion banner image
+});
+```
+
+| Field | Type | Description |
+|---|---|---|
+| `campaignName` | `string` | The name of the ad campaign or advertiser. |
+| `companionBannerUrl` | `string` | A URL pointing to the companion banner image to display. |
+
+### `adSkipUpdate`
+
+Fires repeatedly while the skip countdown changes, giving you `canSkip` and `countdownSeconds` to build a live countdown or enable a skip button at the right moment.
+
+```ts
+player.on("adSkipUpdate", (state) => {
+  if (state.canSkip) {
+    console.log("Skip is available");
+  } else {
+    console.log(`Skip available in ${state.countdownSeconds}s`);
+  }
+});
+```
+
+| Field | Type | Description |
+|---|---|---|
+| `canSkip` | `boolean` | `true` when the ad can be skipped right now. |
+| `countdownSeconds` | `number` | Seconds remaining until skip becomes available. `0` when `canSkip` is `true`. |
+
+### `adEnd`
+
+Fires when the ad finishes, whether it played to completion or was skipped. Use this to hide companion banners and restore normal player UI.
+
+```ts
+player.on("adEnd", (ad) => {
+  console.log(ad.campaignName); // The campaign that just finished
+});
+```
+
+## Skipping and clicking ads
+
+### Checking skip availability
+
+Before calling `skipAd()`, confirm that a skip is currently possible:
+
+```ts
+if (player.canSkipAd()) {
+  player.skipAd();
+}
+```
+
+<Note>
+  You can also call `player.skip()` while an ad is playing. It behaves the same as `skipAd()` — it attempts to skip the ad if it is skippable and a skip is currently available.
+</Note>
+
+### Handling the ad call-to-action
+
+When the user taps your companion banner or a "Learn more" button, call `clickAd()` to register the interaction and open the ad's destination URL:
+
+```ts
+player.clickAd();
+```
+
+## Building a companion banner
+
+The example below shows a self-contained React component that renders a companion banner during ads and hides itself when playback returns to music.
+
+```tsx
+import { useEffect, useState } from "react";
+import { SynxedPlayer } from "synxed-sdk";
+
+interface AdState {
+  campaignName: string;
+  companionBannerUrl: string;
+}
+
+interface Props {
+  player: SynxedPlayer;
+}
+
+export function CompanionBanner({ player }: Props) {
+  const [ad, setAd] = useState<AdState | null>(null);
+
+  useEffect(() => {
+    player.on("adStart", (incoming) => setAd(incoming));
+    player.on("adEnd", () => setAd(null));
+  }, [player]);
+
+  if (!ad) return null;
+
+  return (
+    <button onClick={() => player.clickAd()}>
+      <img src={ad.companionBannerUrl} alt={ad.campaignName} />
+    </button>
+  );
+}
+```
+
+## Building a skip countdown
+
+This component tracks `adSkipUpdate` and renders either a "Skip Ad" button (when skipping is allowed) or a live countdown (while it isn't).
+
+```tsx
+import { useEffect, useState } from "react";
+import { SynxedPlayer } from "synxed-sdk";
+
+interface SkipState {
+  canSkip: boolean;
+  countdownSeconds: number;
+}
+
+interface Props {
+  player: SynxedPlayer;
+}
+
+export function SkipButton({ player }: Props) {
+  const [adActive, setAdActive] = useState(false);
+  const [skipState, setSkipState] = useState<SkipState>({
+    canSkip: false,
+    countdownSeconds: 0,
+  });
+
+  useEffect(() => {
+    player.on("adStart", () => setAdActive(true));
+    player.on("adEnd", () => {
+      setAdActive(false);
+      setSkipState({ canSkip: false, countdownSeconds: 0 });
+    });
+    player.on("adSkipUpdate", setSkipState);
+  }, [player]);
+
+  if (!adActive) return null;
+
+  return skipState.canSkip ? (
+    <button onClick={() => player.skipAd()}>Skip Ad</button>
+  ) : (
+    <p>Skip in {skipState.countdownSeconds}s</p>
+  );
+}
+```
+
+## Putting it together
+
+Combine both components alongside your main player UI. Pass the shared `player` instance as a prop to each.
+
+```tsx
+import { useMemo } from "react";
+import { SynxedPlayer } from "synxed-sdk";
+import { CompanionBanner } from "./CompanionBanner";
+import { SkipButton } from "./SkipButton";
+
+export function PlayerWithAds() {
+  const player = useMemo(
+    () =>
+      new SynxedPlayer({
+        apiKey: "YOUR_SYNXED_API_KEY",
+        autoConnect: true,
+        resumePlayback: true,
+      }),
+    [],
+  );
+
+  return (
+    <section>
+      {/* Your existing player controls */}
+      <button onClick={() => player.pause()}>Pause</button>
+      <button onClick={() => player.resume()}>Play</button>
+
+      {/* Ad UI */}
+      <CompanionBanner player={player} />
+      <SkipButton player={player} />
+    </section>
+  );
+}
+```

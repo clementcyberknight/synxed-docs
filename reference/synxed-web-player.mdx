@@ -1,0 +1,286 @@
+---
+title: "SynxedWebPlayer — Embeddable Licensed Music Player"
+sidebarTitle: "SynxedWebPlayer"
+description: "Mount a fully styled, licensed music player into any web page with a single static method. Supports song, playlist, and radio sources out of the box."
+---
+
+`SynxedWebPlayer` is the fastest way to add licensed music playback to a web application. You call the static `mount()` method with a configuration object, and the SDK injects a self-contained player widget into your page. The returned instance exposes a single `destroy()` method so you can cleanly unmount the widget when you no longer need it.
+
+## SynxedWebPlayerSource
+
+Before mounting a player, decide which source you want to stream. The `source` option accepts one of three union variants:
+
+```typescript
+type SynxedWebPlayerSource =
+  | { type: "song";     songId: string }
+  | { type: "playlist"; playlistCode: string }
+  | { type: "radio" };
+```
+
+| Variant | Required field | Description |
+|---|---|---|
+| `"song"` | `songId` | Stream a single licensed track by its catalog ID. |
+| `"playlist"` | `playlistCode` | Stream an ordered playlist by its short code. |
+| `"radio"` | — | Tune into the live radio broadcast; no extra fields needed. |
+
+## SynxedWebPlayer.mount(options)
+
+`SynxedWebPlayer.mount(options)` is a static factory method that creates, configures, and injects the player widget in one call. It returns a `SynxedWebPlayer` instance you can hold onto for later cleanup.
+
+```typescript
+const player = SynxedWebPlayer.mount(options: SynxedWebPlayerOptions): SynxedWebPlayer;
+```
+
+### Core options
+
+<ParamField body="apiKey" type="string" required>
+  Your Synxed API key. Every request the player makes to the Synxed licensing
+  infrastructure is authenticated with this key.
+</ParamField>
+
+<ParamField body="source" type="SynxedWebPlayerSource" required>
+  The audio source to load on startup. Pass one of the three union variants
+  described in the [SynxedWebPlayerSource](#synxedwebplayersource) section above.
+</ParamField>
+
+<ParamField body="container" type="HTMLElement">
+  The DOM element the player widget should be mounted inside. When omitted the
+  SDK appends the player to `document.body` and positions it as a floating
+  overlay using the `position` option.
+</ParamField>
+
+<ParamField body="serverUrl" type="string">
+  Base URL of your Synxed server. Defaults to the Synxed cloud endpoint. Set
+  this when you are running a self-hosted Synxed deployment.
+</ParamField>
+
+---
+
+### Display options
+
+<ParamField body="mode" type='"mini" | "wide" | "large"'>
+  Controls the visual footprint of the player widget.
+
+  - `"mini"` — compact circular button, ideal for floating overlays.
+  - `"wide"` — a horizontal bar suited to page footers or sidebars.
+  - `"large"` — full-featured panel with album art and track metadata.
+
+  Defaults to `"mini"`.
+</ParamField>
+
+<ParamField body="width" type="string">
+  A CSS width string (e.g. `"320px"`, `"100%"`) applied to the player wrapper
+  element. When unset the player uses its natural width for the chosen `mode`.
+</ParamField>
+
+<ParamField body="position" type="SynxedWebPlayerPosition">
+  Controls where a floating (non-`container`) player is placed on the screen.
+
+  <Expandable title="SynxedWebPlayerPosition fields">
+    <ParamField body="placement" type="string">
+      A CSS-style placement keyword such as `"bottom-right"`, `"bottom-left"`,
+      `"top-right"`, or `"top-left"`.
+    </ParamField>
+    <ParamField body="offsetX" type="string">
+      Horizontal distance from the chosen edge (e.g. `"24px"`).
+    </ParamField>
+    <ParamField body="offsetY" type="string">
+      Vertical distance from the chosen edge (e.g. `"24px"`).
+    </ParamField>
+  </Expandable>
+</ParamField>
+
+<ParamField body="draggable" type="boolean">
+  When `true`, users can drag the floating player widget to any position on
+  the screen. Has no effect when `container` is provided. Defaults to `false`.
+</ParamField>
+
+<ParamField body="theme" type="SynxedWebPlayerTheme">
+  An object of CSS color values that override the player's default palette.
+
+  <Expandable title="SynxedWebPlayerTheme fields">
+    <ParamField body="accent" type="string">
+      Primary accent color used for progress bars, active states, and
+      interactive elements (e.g. `"#6C63FF"`).
+    </ParamField>
+    <ParamField body="background" type="string">
+      Widget background color (e.g. `"#1A1A2E"`).
+    </ParamField>
+    <ParamField body="text" type="string">
+      Primary text color (e.g. `"#FFFFFF"`).
+    </ParamField>
+    <ParamField body="border" type="string">
+      Border and divider color (e.g. `"#2E2E4A"`).
+    </ParamField>
+    <ParamField body="liveDot" type="string">
+      Color of the animated "live" indicator dot shown during radio playback
+      (e.g. `"#FF4545"`).
+    </ParamField>
+    <ParamField body="glow" type="string">
+      Color of the ambient glow effect rendered around the player in `"mini"`
+      mode (e.g. `"rgba(108,99,255,0.4)"`).
+    </ParamField>
+  </Expandable>
+</ParamField>
+
+<ParamField body="className" type="string">
+  One or more CSS class names added to the outermost player wrapper element,
+  allowing you to target the widget with your own stylesheet.
+</ParamField>
+
+<ParamField body="style" type="Partial<CSSStyleDeclaration>">
+  Inline style properties applied directly to the outermost wrapper element.
+  Use sparingly — prefer `theme` for color customisation and `className` for
+  layout adjustments.
+</ParamField>
+
+---
+
+### Behavior options
+
+<ParamField body="resumePlayback" type="boolean">
+  When `true`, the player automatically resumes the listener's last session
+  (identified by `listenerId`) on mount. Defaults to `false`.
+</ParamField>
+
+<ParamField body="enableVoice" type="boolean">
+  Enables the voice-hold feature, which lets users issue voice commands by
+  pressing and holding the microphone button. Requires microphone permission.
+  Defaults to `false`.
+</ParamField>
+
+<ParamField body="voiceHoldMs" type="number">
+  How long (in milliseconds) a user must hold the voice button before the SDK
+  starts recording. Defaults to `500`.
+</ParamField>
+
+<ParamField body="listenerId" type="string">
+  A stable identifier for the current listener. Used for personalized
+  resumption, analytics attribution, and voice session continuity. When omitted
+  the SDK generates a transient anonymous ID.
+</ParamField>
+
+<ParamField body="nowPlayingPollMs" type="number">
+  Interval in milliseconds at which the widget polls the server for now-playing
+  metadata (used primarily during radio playback). Defaults to `10000`.
+</ParamField>
+
+<ParamField body="onMiniClick" type="() => void">
+  Callback invoked when the user clicks the player in `"mini"` mode. Use this
+  to expand a custom UI panel rather than relying on the built-in enlargement
+  behavior.
+</ParamField>
+
+<ParamField body="powerByLabel" type="string">
+  Custom text rendered in the "Powered by" attribution footer. Defaults to
+  `"Powered by Synxed"`.
+</ParamField>
+
+<ParamField body="voice" type="VoiceHoldOptions">
+  Advanced voice-hold configuration object. When `enableVoice` is `true` this
+  provides granular control over voice behaviour.
+
+  <Expandable title="VoiceHoldOptions fields">
+    <ParamField body="enabled" type="boolean">
+      Explicitly enables or disables the voice-hold feature.
+    </ParamField>
+    <ParamField body="autoEndOnSilence" type="boolean">
+      When `true`, the SDK automatically ends the voice hold after a period of
+      silence rather than waiting for the user to release the button.
+    </ParamField>
+    <ParamField body="maxDurationMs" type="number">
+      Maximum recording duration in milliseconds before the hold is
+      automatically ended (e.g. `8000`).
+    </ParamField>
+  </Expandable>
+</ParamField>
+
+<ParamField body="debug" type="boolean">
+  Emits verbose diagnostic logs to the browser console. Enable this during
+  development to trace connection lifecycle and playback events. Defaults to
+  `false`.
+</ParamField>
+
+---
+
+## instance.destroy()
+
+Unmounts the player widget, tears down the WebSocket connection, and removes
+all event listeners. Call this whenever the page component or view that owns
+the player is torn down.
+
+```typescript
+player.destroy(): void;
+```
+
+---
+
+## Complete usage example
+
+<CodeGroup>
+
+```typescript Song
+import { SynxedWebPlayer } from "synxed-sdk";
+
+const player = SynxedWebPlayer.mount({
+  apiKey: "sk_live_xxxxxxxxxxxx",
+  source: { type: "song", songId: "track_abc123" },
+  mode: "wide",
+  width: "100%",
+  container: document.getElementById("music-bar")!,
+  theme: {
+    accent: "#6C63FF",
+    background: "#1A1A2E",
+    text: "#FFFFFF",
+    border: "#2E2E4A",
+    liveDot: "#FF4545",
+    glow: "rgba(108,99,255,0.4)",
+  },
+  resumePlayback: true,
+  listenerId: "user_789",
+  debug: false,
+});
+
+// Later — e.g. on page navigation or component teardown
+player.destroy();
+```
+
+```typescript Playlist (floating mini)
+import { SynxedWebPlayer } from "synxed-sdk";
+
+const player = SynxedWebPlayer.mount({
+  apiKey: "sk_live_xxxxxxxxxxxx",
+  source: { type: "playlist", playlistCode: "CHILL-2024" },
+  mode: "mini",
+  draggable: true,
+  position: { placement: "bottom-right", offsetX: "24px", offsetY: "24px" },
+  enableVoice: true,
+  voice: { autoEndOnSilence: true, maxDurationMs: 8000 },
+  onMiniClick: () => console.log("Mini player clicked"),
+});
+```
+
+```typescript Radio
+import { SynxedWebPlayer } from "synxed-sdk";
+
+const player = SynxedWebPlayer.mount({
+  apiKey: "sk_live_xxxxxxxxxxxx",
+  source: { type: "radio" },
+  mode: "large",
+  nowPlayingPollMs: 15000,
+});
+```
+
+</CodeGroup>
+
+<Note>
+  `SynxedWebPlayer.mount()` is synchronous — the widget is injected into the
+  DOM immediately. Actual audio streaming begins asynchronously once the SDK
+  has authenticated and negotiated a playback session with the server.
+</Note>
+
+<Tip>
+  If you need fine-grained event handling or programmatic playback control, use
+  the lower-level [`SynxedPlayer`](/reference/synxed-player) class instead.
+  `SynxedWebPlayer` is best suited for drop-in widget use cases.
+</Tip>

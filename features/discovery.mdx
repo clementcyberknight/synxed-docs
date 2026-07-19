@@ -1,0 +1,147 @@
+---
+title: "Discover Stations, Mixes, and Schedules"
+sidebarTitle: "Discovery"
+description: "Fetch available mixes, stations, and station schedules using Synxed's built-in discovery helpers, then play them directly from your app."
+---
+
+Synxed provides three standalone utility functions — `fetchMixes`, `fetchStations`, and `fetchStationSchedule` — that let you retrieve available content from the Synxed API and feed it directly into your player. These helpers are separate from the player itself: you import them directly from `synxed-sdk` and call them with your API key in the `Authorization` header.
+
+<Note>
+  All three discovery helpers require your Synxed API key passed as a Bearer token in the `Authorization` header. Keep your key server-side or in a secure environment variable — do not expose it in client-side code.
+</Note>
+
+## Import the Helpers
+
+```typescript
+import { fetchMixes, fetchStations, fetchStationSchedule } from "synxed-sdk";
+```
+
+## Mixes
+
+A mix is a curated, static collection of tracks. Use `fetchMixes` to retrieve all available mixes, then pass a mix's `id` to `player.playMix` to start playback.
+
+<Steps>
+  <Step title="Fetch all mixes">
+    Call `fetchMixes` with the Synxed API base URL and your authorization headers.
+
+    ```typescript
+    const mixes = await fetchMixes("https://api.synxed.com", {
+      headers: { Authorization: "Bearer YOUR_SYNXED_API_KEY" },
+    });
+
+    for (const mix of mixes) {
+      console.log(mix.id, mix.name, mix.trackCount);
+    }
+    ```
+
+    Each mix object includes:
+
+    | Field | Description |
+    |---|---|
+    | `id` | Unique identifier for the mix |
+    | `name` | Display name of the mix |
+    | `trackCount` | Number of tracks in the mix |
+  </Step>
+
+  <Step title="Play a mix">
+    Pass the mix `id` and a `listenerId` to `player.playMix`. The `listenerId` identifies the end user in your system.
+
+    ```typescript
+    await player.playMix({ mixId: mixes[0].id, listenerId: "user_123" });
+    ```
+  </Step>
+</Steps>
+
+## Stations
+
+A station is a live or scheduled broadcast stream. Use `fetchStations` to list all available stations, then start playback with `player.playStation`.
+
+<Steps>
+  <Step title="Fetch all stations">
+    ```typescript
+    const stations = await fetchStations("https://api.synxed.com", {
+      headers: { Authorization: "Bearer YOUR_SYNXED_API_KEY" },
+    });
+
+    for (const station of stations) {
+      console.log(station.id, station.name, station.isLive);
+    }
+    ```
+
+    Each station object includes:
+
+    | Field | Description |
+    |---|---|
+    | `id` | Unique identifier for the station |
+    | `name` | Display name of the station |
+    | `isLive` | `true` if the station is currently broadcasting live |
+  </Step>
+
+  <Step title="Play a station">
+    Pass the station `id` and a `listenerId` to `player.playStation`.
+
+    ```typescript
+    await player.playStation({ stationId: stations[0].id, listenerId: "user_123" });
+    ```
+  </Step>
+</Steps>
+
+## Station Schedules
+
+Use `fetchStationSchedule` to retrieve the programming schedule for a specific station. This is useful for displaying an on-air guide or telling users what's coming up next.
+
+<Steps>
+  <Step title="Fetch a station's schedule">
+    Pass the API base URL, the station's `id`, and your authorization headers.
+
+    ```typescript
+    const schedule = await fetchStationSchedule(
+      "https://api.synxed.com",
+      stations[0].id,
+      { headers: { Authorization: "Bearer YOUR_SYNXED_API_KEY" } },
+    );
+
+    for (const show of schedule) {
+      console.log(show.title, show.startTime, show.endTime);
+    }
+    ```
+
+    Each schedule entry includes:
+
+    | Field | Description |
+    |---|---|
+    | `title` | Name of the show or programme |
+    | `startTime` | ISO 8601 timestamp for when the show begins |
+    | `endTime` | ISO 8601 timestamp for when the show ends |
+  </Step>
+</Steps>
+
+## Putting It All Together
+
+The example below fetches stations and their schedule, then plays the first live station it finds.
+
+```typescript
+import { fetchStations, fetchStationSchedule } from "synxed-sdk";
+
+const AUTH_HEADERS = { headers: { Authorization: "Bearer YOUR_SYNXED_API_KEY" } };
+
+const stations = await fetchStations("https://api.synxed.com", AUTH_HEADERS);
+
+const liveStation = stations.find((s) => s.isLive);
+
+if (liveStation) {
+  // Show the schedule for the live station
+  const schedule = await fetchStationSchedule(
+    "https://api.synxed.com",
+    liveStation.id,
+    AUTH_HEADERS,
+  );
+
+  for (const show of schedule) {
+    console.log(`${show.title}: ${show.startTime} – ${show.endTime}`);
+  }
+
+  // Start playback
+  await player.playStation({ stationId: liveStation.id, listenerId: "user_123" });
+}
+```

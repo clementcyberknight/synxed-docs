@@ -1,0 +1,155 @@
+---
+title: "Add Synxed Music Playback to a Vue 3 App"
+sidebarTitle: "Vue"
+description: "Mount the SynxedWebPlayer inside a Vue 3 Single File Component using onMounted, onUnmounted, and a template ref for the container element."
+---
+
+The Synxed Web Player works naturally with Vue 3's Composition API. You mount the player inside `onMounted` once the component's template element is available in the DOM, pass the container `ref` so the player knows where to attach its UI, and clean up with `onUnmounted` to prevent memory leaks when the component is removed.
+
+## Prerequisites
+
+Install the Synxed SDK before you begin:
+
+```bash
+npm install synxed-sdk
+```
+
+## Create the player component
+
+<Steps>
+
+<Step title="Import the SDK and Vue lifecycle hooks">
+
+Add the player stylesheet and import the Composition API hooks alongside `SynxedWebPlayer`.
+
+```vue
+<script setup lang="ts">
+import { onMounted, onUnmounted, ref } from "vue";
+import "synxed-sdk/player.css";
+import { SynxedWebPlayer } from "synxed-sdk";
+</script>
+```
+
+</Step>
+
+<Step title="Declare the container ref and player variable">
+
+Create a template `ref` that will bind to the DOM element in your template. Declare a plain variable (not a reactive ref) to hold the player instance, since reactivity is not needed for the player object itself.
+
+<Note>
+  The `container` ref is bound to the `<div>` in your template via `ref="container"`. When `onMounted` fires, `container.value` points to the real DOM element — this is what you pass to `SynxedWebPlayer.mount` so the player can attach its UI inside your component's markup rather than appending to the document body.
+</Note>
+
+```vue
+<script setup lang="ts">
+const container = ref<HTMLElement | null>(null);
+let player: SynxedWebPlayer | null = null;
+</script>
+```
+
+</Step>
+
+<Step title="Mount the player in onMounted">
+
+Call `SynxedWebPlayer.mount` after the component has been added to the DOM. Pass `container.value` as the `container` option to scope the player UI to your template element.
+
+```vue
+<script setup lang="ts">
+onMounted(() => {
+  if (!container.value) return;
+  player = SynxedWebPlayer.mount({
+    container: container.value,
+    apiKey: "YOUR_SYNXED_API_KEY",
+    source: { type: "playlist", playlistCode: "sxpl_YOUR_CODE" },
+  });
+});
+</script>
+```
+
+</Step>
+
+<Step title="Destroy the player in onUnmounted">
+
+Call `player.destroy()` when the component is removed from the DOM to release all player resources and event listeners.
+
+```vue
+<script setup lang="ts">
+onUnmounted(() => {
+  player?.destroy();
+  player = null;
+});
+</script>
+```
+
+</Step>
+
+<Step title="Add the container element to the template">
+
+Bind the `container` ref to a `<div>` in your template. The player will render its UI inside this element.
+
+```vue
+<template>
+  <div ref="container" />
+</template>
+```
+
+</Step>
+
+</Steps>
+
+## Complete Single File Component
+
+Here is the full Vue SFC ready to drop into your project:
+
+```vue
+<script setup lang="ts">
+import { onMounted, onUnmounted, ref } from "vue";
+import "synxed-sdk/player.css";
+import { SynxedWebPlayer } from "synxed-sdk";
+
+const container = ref<HTMLElement | null>(null);
+let player: SynxedWebPlayer | null = null;
+
+onMounted(() => {
+  if (!container.value) return;
+  player = SynxedWebPlayer.mount({
+    container: container.value,
+    apiKey: "YOUR_SYNXED_API_KEY",
+    source: { type: "playlist", playlistCode: "sxpl_YOUR_CODE" },
+  });
+});
+
+onUnmounted(() => {
+  player?.destroy();
+  player = null;
+});
+</script>
+
+<template>
+  <div ref="container" />
+</template>
+```
+
+## Usage
+
+Import the component and place it anywhere in your component tree. For site-wide playback, add it to your root `App.vue` or a shared layout component:
+
+```vue
+<script setup lang="ts">
+import MusicPlayer from "@/components/MusicPlayer.vue";
+</script>
+
+<template>
+  <MusicPlayer />
+  <RouterView />
+</template>
+```
+
+<CardGroup cols={2}>
+  <Card title="React" icon="react" href="/frameworks/react">
+    Using Synxed in a React application with useRef and useEffect
+  </Card>
+  <Card title="Next.js" icon="n" href="/frameworks/nextjs">
+    Using Synxed in Next.js with the use client directive
+  </Card>
+</CardGroup>

@@ -1,0 +1,141 @@
+---
+title: "Add Synxed Music Playback to a React App"
+sidebarTitle: "React"
+description: "Mount the SynxedWebPlayer inside a React component using useRef and useEffect, with automatic cleanup on unmount."
+---
+
+The Synxed Web Player integrates cleanly into any React application. You mount the player once inside a `useEffect` hook, keep a reference to it with `useRef`, and destroy it when the component unmounts — giving you full lifecycle control without extra state management overhead.
+
+## Prerequisites
+
+Install the Synxed SDK before you begin:
+
+```bash
+npm install synxed-sdk
+```
+
+## Create the player component
+
+<Steps>
+
+<Step title="Import the SDK and React hooks">
+
+Add the player stylesheet and import `SynxedWebPlayer` alongside the React hooks you need.
+
+```tsx
+import { useEffect, useRef } from "react";
+import "synxed-sdk/player.css";
+import { SynxedWebPlayer } from "synxed-sdk";
+```
+
+</Step>
+
+<Step title="Store the player instance in a ref">
+
+Declare a `useRef` to hold the player instance across renders.
+
+<Note>
+  `useRef` is used here — rather than `useState` — because storing the player instance does not need to trigger a re-render. The ref gives you a stable, mutable container that persists for the lifetime of the component without causing unnecessary updates.
+</Note>
+
+```tsx
+const playerRef = useRef<SynxedWebPlayer | null>(null);
+```
+
+</Step>
+
+<Step title="Mount the player in useEffect">
+
+Call `SynxedWebPlayer.mount` inside `useEffect` so the player only initialises in the browser, after the component has been added to the DOM.
+
+<Tip>
+  Always mount the player inside `useEffect`. React may run component bodies more than once during rendering, but `useEffect` is guaranteed to run only in the browser after a successful mount — making it the correct place to initialise any browser-dependent resource.
+</Tip>
+
+```tsx
+useEffect(() => {
+  playerRef.current = SynxedWebPlayer.mount({
+    apiKey: "YOUR_SYNXED_API_KEY",
+    source: { type: "playlist", playlistCode: "sxpl_YOUR_CODE" },
+    mode: "wide",
+    resumePlayback: true,
+  });
+
+  return () => {
+    playerRef.current?.destroy();
+    playerRef.current = null;
+  };
+}, []);
+```
+
+The cleanup function returned from `useEffect` calls `destroy()` when the component unmounts, releasing all player resources and removing the player UI from the page.
+
+</Step>
+
+<Step title="Return null from the component">
+
+The player renders its own UI into the page — your component does not need to return any JSX markup.
+
+```tsx
+return null;
+```
+
+</Step>
+
+</Steps>
+
+## Complete component
+
+Here is the full `MusicPlayer` component ready to drop into your project:
+
+```tsx
+import { useEffect, useRef } from "react";
+import "synxed-sdk/player.css";
+import { SynxedWebPlayer } from "synxed-sdk";
+
+export function MusicPlayer() {
+  const playerRef = useRef<SynxedWebPlayer | null>(null);
+
+  useEffect(() => {
+    playerRef.current = SynxedWebPlayer.mount({
+      apiKey: "YOUR_SYNXED_API_KEY",
+      source: { type: "playlist", playlistCode: "sxpl_YOUR_CODE" },
+      mode: "wide",
+      resumePlayback: true,
+    });
+
+    return () => {
+      playerRef.current?.destroy();
+      playerRef.current = null;
+    };
+  }, []);
+
+  return null;
+}
+```
+
+## Usage
+
+Import `MusicPlayer` anywhere in your component tree. Because the player attaches itself to the page globally, you typically place it once near the root of your application:
+
+```tsx
+import { MusicPlayer } from "./MusicPlayer";
+
+export function App() {
+  return (
+    <>
+      <MusicPlayer />
+      {/* rest of your app */}
+    </>
+  );
+}
+```
+
+<CardGroup cols={2}>
+  <Card title="Next.js" icon="n" href="/frameworks/nextjs">
+    Using Synxed inside a Next.js App Router or Pages Router project
+  </Card>
+  <Card title="Vue" icon="v" href="/frameworks/vue">
+    Using Synxed inside a Vue 3 component with the Composition API
+  </Card>
+</CardGroup>

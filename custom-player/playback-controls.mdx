@@ -1,0 +1,142 @@
+---
+title: "Playback Controls for SynxedPlayer"
+sidebarTitle: "Controls"
+description: "Control playback in SynxedPlayer: pause, resume, stop, skip, seek by milliseconds, and set volume between 0 and 1."
+---
+
+Once `SynxedPlayer` has started streaming content, you control it through a set of synchronous methods that you can call directly from any UI event handler, game loop, or automation. This page documents every control method, the data it expects, and the context in which it applies.
+
+## Transport controls
+
+These methods start and stop the audio stream directly.
+
+| Method | Description |
+|---|---|
+| `player.pause()` | Pauses playback at the current position. |
+| `player.resume()` | Resumes from the paused position. |
+| `player.stop()` | Stops playback and clears the current track. |
+
+```ts
+player.pause();
+player.resume();
+player.stop();
+```
+
+## Skip controls
+
+Use these methods to move between tracks in a playlist or mix.
+
+| Method | Description |
+|---|---|
+| `player.skip()` | Advances to the next track. |
+| `player.previous()` | Returns to the previous track. |
+| `player.skipTo(index)` | Jumps directly to a track by its zero-based queue index. |
+
+```ts
+player.skip();       // next track
+player.previous();   // previous track
+player.skipTo(2);    // jump to the third track in the queue
+```
+
+<Note>
+  `skip()`, `previous()`, and `skipTo(index)` are designed for playlists and mixes. Live radio and station streams are continuous — skipping is not applicable to them.
+</Note>
+
+<Note>
+  While an ad is playing, calling `skip()` attempts to skip the ad. The skip only succeeds if the ad is skippable and a skip is currently available. See the [Ads](/custom-player/ads) page for how to check skip availability before calling.
+</Note>
+
+## Seek
+
+`seek(ms)` moves the playback position to an absolute time, expressed in **milliseconds**.
+
+```ts
+// Seek to 45 seconds into the current track
+player.seek(45_000);
+```
+
+<Tip>
+  Listen to the `timeUpdate` event to keep a progress bar in sync and translate its `currentTime` value (also in milliseconds) into a percentage for your slider.
+</Tip>
+
+## Volume
+
+`setVolume(volume)` accepts a number between `0` (silent) and `1` (full volume).
+
+```ts
+player.setVolume(0);    // mute
+player.setVolume(0.5);  // 50%
+player.setVolume(1);    // full volume
+```
+
+## All methods at a glance
+
+| Method | Parameter | Unit / Range | Notes |
+|---|---|---|---|
+| `pause()` | — | — | No-op if already paused. |
+| `resume()` | — | — | No-op if already playing. |
+| `stop()` | — | — | Clears the current track. |
+| `skip()` | — | — | Playlists and mixes only; skips ads when available. |
+| `previous()` | — | — | Playlists and mixes only. |
+| `skipTo(index)` | `index: number` | Zero-based integer | Jumps to that position in the queue. |
+| `seek(ms)` | `ms: number` | Milliseconds | Absolute position within the current track. |
+| `setVolume(volume)` | `volume: number` | `0` – `1` | Values outside the range are clamped. |
+
+## Example: a complete control bar
+
+The snippet below wires all transport and skip controls to buttons, and binds a range input to `seek` and `setVolume`.
+
+```tsx
+import { useEffect, useMemo, useState } from "react";
+import { SynxedPlayer, type PlayerState } from "synxed-sdk";
+
+export function ControlBar() {
+  const player = useMemo(
+    () => new SynxedPlayer({ apiKey: "YOUR_SYNXED_API_KEY", autoConnect: true }),
+    [],
+  );
+  const [state, setState] = useState<PlayerState | null>(null);
+
+  useEffect(() => {
+    player.on("stateChange", setState);
+    void player.playPlaylist({ playlistCode: "sxpl_YOUR_CODE", listenerId: "user_123" });
+    return () => { player.destroy(); };
+  }, [player]);
+
+  const progress = state
+    ? Math.round((state.currentTime / state.duration) * 100)
+    : 0;
+
+  return (
+    <section>
+      <button onClick={() => player.previous()}>Previous</button>
+      <button onClick={() => player.resume()}>Play</button>
+      <button onClick={() => player.pause()}>Pause</button>
+      <button onClick={() => player.skip()}>Skip</button>
+      <button onClick={() => player.stop()}>Stop</button>
+
+      {/* Progress / seek */}
+      <input
+        type="range"
+        min={0}
+        max={100}
+        value={progress}
+        onChange={(e) => {
+          const ms = (Number(e.target.value) / 100) * (state?.duration ?? 0);
+          player.seek(ms);
+        }}
+      />
+
+      {/* Volume */}
+      <input
+        type="range"
+        min={0}
+        max={1}
+        step={0.01}
+        defaultValue={1}
+        onChange={(e) => player.setVolume(Number(e.target.value))}
+      />
+    </section>
+  );
+}
+```

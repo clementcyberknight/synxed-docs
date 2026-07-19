@@ -1,0 +1,108 @@
+---
+title: "Add Synxed Music Playback to a Plain HTML Page"
+sidebarTitle: "Plain HTML"
+description: "Test the SynxedWebPlayer quickly in a plain HTML file using direct node_modules imports and a type=module script tag."
+---
+
+You can get the Synxed Web Player running in a plain HTML file without a build step, which is ideal for quick local experiments and proof-of-concept work. You load the player stylesheet with a `<link>` tag and import the player module using a `<script type="module">` tag that points directly into your `node_modules` folder.
+
+<Warning>
+  Direct `node_modules` imports are intended for **local testing only**. Shipping a site to production this way exposes your entire `node_modules` directory and produces large, unoptimised network requests. For any production deployment use a bundler such as [Vite](https://vitejs.dev), [Webpack](https://webpack.js.org), [Next.js](https://nextjs.org), [Nuxt](https://nuxt.com), [Remix](https://remix.run), or [Angular CLI](https://angular.dev/tools/cli) to tree-shake and bundle your dependencies correctly.
+</Warning>
+
+## Prerequisites
+
+Install the Synxed SDK into your project folder before you begin:
+
+```bash
+npm install synxed-sdk
+```
+
+## Set up the HTML file
+
+<Steps>
+
+<Step title="Link the player stylesheet">
+
+Add a `<link>` tag in the `<head>` of your HTML file pointing to the CSS file inside `node_modules`:
+
+```html
+<link
+  rel="stylesheet"
+  href="./node_modules/synxed-sdk/dist/synxed-web-player.css"
+/>
+```
+
+</Step>
+
+<Step title="Import and mount the player">
+
+Add a `<script type="module">` tag at the bottom of your `<body>`. The `type="module"` attribute is required — it enables native ES module `import` syntax in the browser and ensures the script is deferred automatically.
+
+```html
+<script type="module">
+  import { SynxedWebPlayer } from "./node_modules/synxed-sdk/dist/index.mjs";
+
+  SynxedWebPlayer.mount({
+    apiKey: "YOUR_SYNXED_API_KEY",
+    source: { type: "radio" },
+  });
+</script>
+```
+
+</Step>
+
+</Steps>
+
+## Complete example
+
+Here is a minimal but complete HTML file that loads and mounts the player:
+
+```html
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Synxed Player Test</title>
+    <link
+      rel="stylesheet"
+      href="./node_modules/synxed-sdk/dist/synxed-web-player.css"
+    />
+  </head>
+  <body>
+    <h1>My Page</h1>
+
+    <script type="module">
+      import { SynxedWebPlayer } from "./node_modules/synxed-sdk/dist/index.mjs";
+
+      SynxedWebPlayer.mount({
+        apiKey: "YOUR_SYNXED_API_KEY",
+        source: { type: "radio" },
+      });
+    </script>
+  </body>
+</html>
+```
+
+Open this file in your browser (served from a local HTTP server, not opened as a `file://` URL) and the player will appear on the page.
+
+<Tip>
+  Ready to move beyond local testing? Follow the [Quickstart guide](/quickstart) to set up Synxed with a bundler-based project from scratch — you will get faster builds, smaller bundles, and a production-ready setup in minutes.
+</Tip>
+
+## Why type="module" is required
+
+Standard `<script>` tags do not support `import` statements. Adding `type="module"` tells the browser to treat the script as an ES module, which unlocks native `import`/`export` syntax. It also makes the script execute after the HTML has been parsed, so you do not need an explicit `defer` attribute.
+
+<CardGroup cols={2}>
+  <Card title="React" icon="react" href="/frameworks/react">
+    Using Synxed in a React application with useRef and useEffect
+  </Card>
+  <Card title="Next.js" icon="n" href="/frameworks/nextjs">
+    Using Synxed in Next.js with the use client directive
+  </Card>
+  <Card title="Vue" icon="v" href="/frameworks/vue">
+    Using Synxed in a Vue 3 Single File Component
+  </Card>
+</CardGroup>

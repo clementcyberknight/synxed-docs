@@ -1,0 +1,192 @@
+---
+title: "Custom Player UI with SynxedPlayer"
+sidebarTitle: "Overview"
+description: "Build a fully custom music player UI using SynxedPlayer — your own buttons, queue, visualizer, and game controls powered by Synxed."
+---
+
+`SynxedPlayer` gives you complete control over your music player's look, feel, and behavior. Instead of mounting a pre-built widget, you wire Synxed's playback engine directly to your own buttons, progress bars, queue displays, visualizers, or game HUDs — whatever your product needs.
+
+<Tip>
+  If you don't need a custom UI, start with `SynxedWebPlayer`. It drops a fully functional, branded player onto any page in minutes. Move to `SynxedPlayer` only when you need complete control over the interface.
+</Tip>
+
+## When to use SynxedPlayer
+
+`SynxedPlayer` is the right choice when you need to:
+
+<CardGroup cols={2}>
+  <Card title="Custom layouts" icon="paintbrush">
+    Design your own player chrome — buttons, sliders, album art placement, and typography — without overriding SDK styles.
+  </Card>
+  <Card title="Game & app integration" icon="gamepad">
+    Embed music controls directly into a game HUD, native app shell, or any non-standard UI surface.
+  </Card>
+  <Card title="Queue & visualizer" icon="list-music">
+    Build a full-featured queue browser or audio visualizer that reacts to real-time track and state data.
+  </Card>
+  <Card title="Voice controls" icon="microphone">
+    Add push-to-talk voice commands so users can request music by speaking, using the built-in voice pipeline.
+  </Card>
+</CardGroup>
+
+## Installation
+
+Install the Synxed SDK from npm if you haven't already:
+
+```bash
+npm install synxed-sdk
+```
+
+## Instantiating SynxedPlayer
+
+Import `SynxedPlayer` and create an instance with your configuration. You typically create the player once per session — in a module-level variable, a React `useMemo`, or a framework service.
+
+```ts
+import { SynxedPlayer } from "synxed-sdk";
+
+const player = new SynxedPlayer({
+  apiKey: "YOUR_SYNXED_API_KEY",
+  autoConnect: true,
+  resumePlayback: true,
+  voice: {
+    enabled: true,
+    autoEndOnSilence: true,
+    maxDurationMs: 30000,
+  },
+});
+```
+
+### Configuration options
+
+| Option | Type | Description |
+|---|---|---|
+| `apiKey` | `string` | Your Synxed API key. Required. |
+| `autoConnect` | `boolean` | Automatically establish the playback connection on instantiation. |
+| `resumePlayback` | `boolean` | Resume the listener's last playback position when the player initialises. |
+| `voice.enabled` | `boolean` | Enable the voice command pipeline. |
+| `voice.autoEndOnSilence` | `boolean` | Automatically end voice capture when the user stops speaking. |
+| `voice.maxDurationMs` | `number` | Maximum voice capture duration in milliseconds before auto-stop. |
+
+## Starting playback
+
+`SynxedPlayer` exposes five play methods depending on the content you want to stream. Every method accepts a `listenerId` that identifies the current user for licensing and analytics purposes.
+
+<Steps>
+  <Step title="Play a single song">
+    Start playback of a specific track by its song ID.
+
+    ```ts
+    await player.playSong({ songId: "SYNX_EX_SONG_ID", listenerId: "user_123" });
+    ```
+  </Step>
+  <Step title="Play a playlist">
+    Stream a curated playlist using its playlist code.
+
+    ```ts
+    await player.playPlaylist({ playlistCode: "sxpl_YOUR_CODE", listenerId: "user_123" });
+    ```
+  </Step>
+  <Step title="Play a mix">
+    Start an algorithmically generated mix by mix ID.
+
+    ```ts
+    await player.playMix({ mixId: "mix_YOUR_ID", listenerId: "user_123" });
+    ```
+  </Step>
+  <Step title="Play live radio">
+    Tune into Synxed's live radio stream.
+
+    ```ts
+    await player.playRadio({ listenerId: "user_123" });
+    ```
+  </Step>
+  <Step title="Play a station">
+    Connect to a continuous scheduled station stream by station ID.
+
+    ```ts
+    await player.playStation({ stationId: "station_YOUR_ID", listenerId: "user_123" });
+    ```
+
+    <Note>
+      Stations are continuous scheduled streams. The player does not restore a previous playback position after a page refresh — listeners always join the station at the current live point.
+    </Note>
+  </Step>
+</Steps>
+
+## Full React example
+
+The pattern below shows how to wire `SynxedPlayer` into a React component using `useMemo` to keep a stable player reference and `useEffect` to attach event listeners and start playback. The player is destroyed automatically when the component unmounts.
+
+```tsx
+import { useEffect, useMemo, useState } from "react";
+import { SynxedError, SynxedPlayer, type PlayerState, type TrackInfo } from "synxed-sdk";
+
+const listenerId = "user_123";
+
+export function CustomSynxedPlayer() {
+  const [state, setState] = useState<PlayerState | null>(null);
+  const [track, setTrack] = useState<TrackInfo | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  const player = useMemo(
+    () =>
+      new SynxedPlayer({
+        apiKey: "YOUR_SYNXED_API_KEY",
+        autoConnect: true,
+        resumePlayback: true,
+        voice: { enabled: true },
+      }),
+    [],
+  );
+
+  useEffect(() => {
+    player.on("stateChange", setState);
+    player.on("trackChange", setTrack);
+    player.on("error", (err) => {
+      if (err instanceof SynxedError) {
+        setError(err.suggestion ? `${err.message}\n${err.suggestion}` : err.message);
+        return;
+      }
+      setError(err.message);
+    });
+
+    void player.playPlaylist({ playlistCode: "sxpl_YOUR_CODE", listenerId });
+
+    return () => {
+      player.destroy();
+    };
+  }, [player]);
+
+  return (
+    <section>
+      <p>{state?.status ?? "loading"}</p>
+      <p>{track?.title ?? "Loading track"}</p>
+      <p>{track?.artist ?? ""}</p>
+      <button onClick={() => player.resume()}>Play</button>
+      <button onClick={() => player.pause()}>Pause</button>
+      <button onClick={() => player.skip()}>Skip</button>
+      <button
+        onPointerDown={() => { void player.beginVoiceHold({ listenerId }); }}
+        onPointerUp={() => { void player.endVoiceHold(); }}
+      >
+        Hold to speak
+      </button>
+      {error ? <pre>{error}</pre> : null}
+    </section>
+  );
+}
+```
+
+## Next steps
+
+<CardGroup cols={3}>
+  <Card title="Playback Controls" icon="sliders" href="/custom-player/playback-controls">
+    Pause, resume, skip, seek, and adjust volume with the full controls API.
+  </Card>
+  <Card title="Ads" icon="rectangle-ad" href="/custom-player/ads">
+    Handle ad events and build companion banners and skip UIs.
+  </Card>
+  <Card title="Events" icon="bolt" href="/custom-player/events">
+    Sync your UI to state changes, track changes, and voice events.
+  </Card>
+</CardGroup>

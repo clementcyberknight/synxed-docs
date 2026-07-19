@@ -1,0 +1,95 @@
+---
+title: "Resume Playback Across Page Refreshes"
+sidebarTitle: "Resume Playback"
+description: "Automatically restore a listener's position in a song or playlist after a page refresh, with full control over when resume is active."
+---
+
+Resumable playback lets the player remember where a listener left off and pick up from that position the next time the page loads. The built-in web player enables this automatically for songs and playlists — no configuration required. When a listener refreshes the page mid-track, the player restores the track, queue position, and playback timestamp from a locally stored checkpoint.
+
+## Default Behavior
+
+Resume is **on by default** for `SynxedWebPlayer`. You do not need to set any option to get it.
+
+```ts
+SynxedWebPlayer.mount({
+  apiKey: "YOUR_SYNXED_API_KEY",
+  source: { type: "song", songId: "SYNX_EX_SONG_ID" },
+  resumePlayback: true, // This is the default — you can omit it
+});
+```
+
+## Disabling Resume
+
+Set `resumePlayback: false` if you want every page load to start fresh, regardless of prior listening history.
+
+```ts
+SynxedWebPlayer.mount({
+  apiKey: "YOUR_SYNXED_API_KEY",
+  source: { type: "playlist", playlistCode: "sxpl_YOUR_CODE" },
+  resumePlayback: false,
+});
+```
+
+## Which Sources Support Resume
+
+Not every source type can be resumed. Live and scheduled streams are always joined at their current live position.
+
+| Source | Resumes? | Notes |
+|--------|----------|-------|
+| Song | ✅ Yes | Restores track position on next page load. |
+| Playlist | ✅ Yes | Restores current track and queue position. |
+| Mix (via `SynxedPlayer`) | ✅ Yes | Requires `resumePlayback: true` on `SynxedPlayer`. |
+| Live Radio | ❌ No | Always joins the stream at the current live position. |
+| Scheduled Station | ❌ No | Always joins at the current scheduled position. |
+
+<Note>
+  The SDK stores only playback metadata — track ID, timestamp, and queue state. It never stores your API key, audio files, or any personal listener data in the checkpoint.
+</Note>
+
+## How Checkpoints Work
+
+The SDK writes checkpoint data to local storage as playback progresses. Checkpoint writes are throttled so they don't affect playback performance. When the page loads, the player reads the latest checkpoint and, if one is found for the current source, seeks to the saved position before starting.
+
+## Resume with a Custom UI (SynxedPlayer)
+
+If you are building your own player controls with `SynxedPlayer` instead of using the built-in UI, you need to pass a stable `listenerId` to reliably resume playback across sessions. The `listenerId` is the key the SDK uses to look up the correct checkpoint.
+
+<Steps>
+  <Step title="Import SynxedPlayer and create an instance">
+    ```ts
+    import { SynxedPlayer } from "synxed-sdk";
+
+    const player = new SynxedPlayer({
+      apiKey: "YOUR_SYNXED_API_KEY",
+      autoConnect: true,
+      resumePlayback: true,
+    });
+    ```
+  </Step>
+  <Step title="Play a playlist with a stable listener ID">
+    Pass an identifier that stays constant for the same user across page loads — such as a database user ID or a persistent session token.
+
+    ```ts
+    const listenerId = "user_123";
+
+    await player.playPlaylist({
+      playlistCode: "sxpl_YOUR_CODE",
+      listenerId,
+    });
+    ```
+  </Step>
+</Steps>
+
+<Warning>
+  If `listenerId` changes between sessions, the SDK treats the listener as a brand-new user and will not restore the previous checkpoint. Make sure the value you pass is stable for the lifetime of a user's account or session.
+</Warning>
+
+## Resume Rules at a Glance
+
+- Songs resume from their saved timestamp.
+- Playlists resume from both the saved track and its timestamp.
+- Mixes resume when using `SynxedPlayer` with `resumePlayback: true`.
+- Live radio never resumes — it always joins the current live position.
+- Scheduled stations never resume — they always join the current scheduled position.
+- Checkpoint writes are throttled to avoid performance impact.
+- The SDK stores metadata only — never API keys or audio files.

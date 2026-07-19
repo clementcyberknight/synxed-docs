@@ -1,0 +1,161 @@
+---
+title: "Customizing Web Player Appearance & Layout"
+sidebarTitle: "Appearance"
+description: "Control the player's mode, size, screen position, drag behavior, theme colors, and CSS class from a single mount options object."
+---
+
+Every visual aspect of `SynxedWebPlayer` is configurable through the options you pass to `SynxedWebPlayer.mount()`. You can switch between three layout modes, constrain the player's width, pin it to any corner of the viewport, let listeners drag it around, and match your brand with a custom color theme — all without writing any CSS from scratch.
+
+## Player Modes
+
+The `mode` option controls the overall layout of the player widget.
+
+| Mode | Description |
+|------|-------------|
+| `wide` | Compact horizontal bar. **Default.** |
+| `mini` | Circular avatar button with a small title pill alongside it. |
+| `large` | Larger card with a visualizer and full transport controls. |
+
+```ts
+SynxedWebPlayer.mount({
+  apiKey: "YOUR_SYNXED_API_KEY",
+  source: { type: "playlist", playlistCode: "sxpl_YOUR_CODE" },
+  mode: "wide",
+});
+```
+
+<Tip>
+  Use `mini` mode when screen real estate is limited, such as on mobile layouts or sidebar widgets. Use `large` mode when music is the primary focus of the page.
+</Tip>
+
+## Width
+
+Set `width` to any valid CSS length value. You can use fixed units or responsive expressions.
+
+<CodeGroup>
+  ```ts Fixed Width
+  SynxedWebPlayer.mount({
+    apiKey: "YOUR_SYNXED_API_KEY",
+    source: { type: "playlist", playlistCode: "sxpl_YOUR_CODE" },
+    width: "720px",
+  });
+  ```
+
+  ```ts Responsive Width
+  SynxedWebPlayer.mount({
+    apiKey: "YOUR_SYNXED_API_KEY",
+    source: { type: "playlist", playlistCode: "sxpl_YOUR_CODE" },
+    width: "min(92vw, 820px)",
+  });
+  ```
+</CodeGroup>
+
+## Position
+
+Use `position` to pin the floating player to a specific area of the viewport. Supply a `placement` string and optional pixel offsets to fine-tune the exact location.
+
+### Supported Placements
+
+| Placement | Location |
+|-----------|----------|
+| `top-left` | Top-left corner of the viewport |
+| `top-right` | Top-right corner of the viewport |
+| `bottom-left` | Bottom-left corner of the viewport |
+| `bottom-right` | Bottom-right corner of the viewport |
+| `bottom-center` | Horizontally centered along the bottom edge |
+
+```ts
+SynxedWebPlayer.mount({
+  apiKey: "YOUR_SYNXED_API_KEY",
+  source: { type: "radio" },
+  position: {
+    placement: "bottom-center",
+    offsetX: 16,
+    offsetY: 24,
+  },
+});
+```
+
+`offsetX` and `offsetY` are pixel values that nudge the player away from the edge defined by `placement`. Both default to `0`.
+
+<Note>
+  The `position` option only applies when the player is in floating mode (i.e., no `container` element was provided). When mounted inside a container, position is determined by your page layout.
+</Note>
+
+## Dragging
+
+Set `draggable: true` to let listeners reposition the player by dragging it across the screen.
+
+```ts
+SynxedWebPlayer.mount({
+  apiKey: "YOUR_SYNXED_API_KEY",
+  source: { type: "playlist", playlistCode: "sxpl_YOUR_CODE" },
+  draggable: true,
+});
+```
+
+<Note>
+  Dragging only works when the player owns its own floating root. If you mounted the player inside a `container` element, `draggable` has no effect.
+</Note>
+
+## Theme
+
+The player uses a gold accent color by default. Set `theme.accent` to your brand color and the SDK automatically derives sensible defaults for the border, live indicator dot, and glow. Override any of those derived values individually when you need them to differ.
+
+### Core Colors
+
+```ts
+SynxedWebPlayer.mount({
+  apiKey: "YOUR_SYNXED_API_KEY",
+  source: { type: "playlist", playlistCode: "sxpl_YOUR_CODE" },
+  theme: {
+    accent: "#22c55e",
+    background: "#050805",
+    text: "#ffffff",
+  },
+});
+```
+
+| Property | What it controls |
+|----------|-----------------|
+| `accent` | Primary highlight color — buttons, progress bar, active states. |
+| `background` | Player card or bar background color. |
+| `text` | Track title, artist name, and label colors. |
+
+### Overriding Derived Colors
+
+`border`, `liveDot`, and `glow` all follow `accent` automatically. Override them only when those elements need distinct values.
+
+```ts
+SynxedWebPlayer.mount({
+  apiKey: "YOUR_SYNXED_API_KEY",
+  source: { type: "playlist", playlistCode: "sxpl_YOUR_CODE" },
+  theme: {
+    accent: "#22c55e",
+    border: "rgba(34, 197, 94, 0.55)",
+    liveDot: "#22c55e",
+    glow: "rgba(34, 197, 94, 0.35)",
+  },
+});
+```
+
+| Property | What it controls |
+|----------|-----------------|
+| `border` | Outline around the player widget. |
+| `liveDot` | Animated dot shown during live radio streams. |
+| `glow` | Soft shadow or halo effect behind the player. |
+
+## Custom Class and Inline Style
+
+Apply a CSS class name and additional inline styles to the player's root element for integration with your existing stylesheets or stacking context.
+
+```ts
+SynxedWebPlayer.mount({
+  apiKey: "YOUR_SYNXED_API_KEY",
+  source: { type: "playlist", playlistCode: "sxpl_YOUR_CODE" },
+  className: "my-synxed-player",
+  style: { zIndex: "9999" },
+});
+```
+
+Use `className` to target the player with your own CSS rules. Use `style` for one-off overrides — such as adjusting `zIndex` to keep the player above modals or overlays in your application.

@@ -1,0 +1,312 @@
+---
+title: "Discovery Helpers — Fetch Mixes, Stations, and Now Playing"
+sidebarTitle: "Discovery Helpers"
+description: "Four standalone async helpers for discovering available mixes, stations, schedules, and current radio metadata from a Synxed server before playback begins."
+---
+
+The Synxed SDK ships four standalone async helper functions for querying your Synxed server outside of a live playback session. Use them to populate UI elements such as browse screens, station pickers, and now-playing widgets before — or independently of — mounting a player. All four functions are tree-shakable and can be imported individually.
+
+```typescript
+import {
+  fetchMixes,
+  fetchStations,
+  fetchStationSchedule,
+  fetchRadioNowPlaying,
+} from "synxed-sdk";
+```
+
+<Note>
+  `fetchMixes`, `fetchStations`, and `fetchStationSchedule` require an
+  `Authorization` header containing your API key. `fetchRadioNowPlaying` is
+  unauthenticated and safe to call from a public-facing client.
+</Note>
+
+---
+
+## fetchMixes
+
+Retrieves the list of curated mixes available on your Synxed server. Use the
+returned `id` values as `mixId` arguments to `player.playMix()`.
+
+### Signature
+
+```typescript
+fetchMixes(
+  serverUrl: string,
+  options: { headers: { Authorization: string } }
+): Promise<Mix[]>
+```
+
+### Parameters
+
+<ParamField body="serverUrl" type="string" required>
+  The base URL of your Synxed server (e.g. `"https://stream.example.com"`).
+</ParamField>
+
+<ParamField body="options.headers.Authorization" type="string" required>
+  Your Synxed API key prefixed with `"Bearer "`, for example
+  `"Bearer sk_live_xxxxxxxxxxxx"`.
+</ParamField>
+
+### Return type — `Mix`
+
+```typescript
+interface Mix {
+  id: string;
+  name: string;
+  trackCount: number;
+}
+```
+
+<ResponseField name="id" type="string" required>
+  The unique identifier for this mix. Pass this as `mixId` to
+  `player.playMix()`.
+</ResponseField>
+
+<ResponseField name="name" type="string" required>
+  The human-readable display name of the mix (e.g. `"Morning Focus"`).
+</ResponseField>
+
+<ResponseField name="trackCount" type="number" required>
+  The number of tracks included in the mix. Use this to show a track count
+  badge in your browse UI.
+</ResponseField>
+
+### Example
+
+```typescript
+import { fetchMixes } from "synxed-sdk";
+
+const mixes = await fetchMixes("https://stream.example.com", {
+  headers: { Authorization: "Bearer sk_live_xxxxxxxxxxxx" },
+});
+
+for (const mix of mixes) {
+  console.log(`${mix.name} — ${mix.trackCount} tracks (id: ${mix.id})`);
+}
+
+// Play the first mix
+player.playMix({ mixId: mixes[0].id, listenerId: "user_789" });
+```
+
+---
+
+## fetchStations
+
+Retrieves the list of radio stations available on your Synxed server. Use the
+returned `id` values as `stationId` arguments to `player.playStation()`.
+
+### Signature
+
+```typescript
+fetchStations(
+  serverUrl: string,
+  options: { headers: { Authorization: string } }
+): Promise<Station[]>
+```
+
+### Parameters
+
+<ParamField body="serverUrl" type="string" required>
+  The base URL of your Synxed server.
+</ParamField>
+
+<ParamField body="options.headers.Authorization" type="string" required>
+  Your Synxed API key prefixed with `"Bearer "`.
+</ParamField>
+
+### Return type — `Station`
+
+```typescript
+interface Station {
+  id: string;
+  name: string;
+  isLive: boolean;
+}
+```
+
+<ResponseField name="id" type="string" required>
+  The unique identifier for this station. Pass this as `stationId` to
+  `player.playStation()`.
+</ResponseField>
+
+<ResponseField name="name" type="string" required>
+  The human-readable display name of the station (e.g. `"Deep Focus Radio"`).
+</ResponseField>
+
+<ResponseField name="isLive" type="boolean" required>
+  `true` when the station is currently broadcasting a live show. Use this to
+  render a live indicator badge in your station list UI.
+</ResponseField>
+
+### Example
+
+```typescript
+import { fetchStations } from "synxed-sdk";
+
+const stations = await fetchStations("https://stream.example.com", {
+  headers: { Authorization: "Bearer sk_live_xxxxxxxxxxxx" },
+});
+
+const liveStations = stations.filter((s) => s.isLive);
+
+console.log(`${liveStations.length} station(s) currently live`);
+
+// Tune into the first live station
+if (liveStations.length > 0) {
+  player.playStation({ stationId: liveStations[0].id });
+}
+```
+
+---
+
+## fetchStationSchedule
+
+Retrieves the programme schedule for a specific station. Use this to show
+upcoming shows in a station detail view or EPG-style interface.
+
+### Signature
+
+```typescript
+fetchStationSchedule(
+  serverUrl: string,
+  stationId: string,
+  options: { headers: { Authorization: string } }
+): Promise<ScheduleEntry[]>
+```
+
+### Parameters
+
+<ParamField body="serverUrl" type="string" required>
+  The base URL of your Synxed server.
+</ParamField>
+
+<ParamField body="stationId" type="string" required>
+  The ID of the station whose schedule you want to fetch. Obtain this from
+  `fetchStations`.
+</ParamField>
+
+<ParamField body="options.headers.Authorization" type="string" required>
+  Your Synxed API key prefixed with `"Bearer "`.
+</ParamField>
+
+### Return type — `ScheduleEntry`
+
+```typescript
+interface ScheduleEntry {
+  title: string;
+  startTime: string;
+  endTime: string;
+}
+```
+
+<ResponseField name="title" type="string" required>
+  The name or title of the programme slot (e.g. `"Late Night Jazz"`).
+</ResponseField>
+
+<ResponseField name="startTime" type="string" required>
+  ISO 8601 timestamp for the start of the programme slot
+  (e.g. `"2025-01-15T22:00:00Z"`).
+</ResponseField>
+
+<ResponseField name="endTime" type="string" required>
+  ISO 8601 timestamp for the end of the programme slot
+  (e.g. `"2025-01-16T00:00:00Z"`).
+</ResponseField>
+
+### Example
+
+```typescript
+import { fetchStations, fetchStationSchedule } from "synxed-sdk";
+
+const API_KEY = "Bearer sk_live_xxxxxxxxxxxx";
+const SERVER  = "https://stream.example.com";
+
+const stations = await fetchStations(SERVER, { headers: { Authorization: API_KEY } });
+const stationId = stations[0].id;
+
+const schedule = await fetchStationSchedule(SERVER, stationId, {
+  headers: { Authorization: API_KEY },
+});
+
+for (const entry of schedule) {
+  const start = new Date(entry.startTime).toLocaleTimeString();
+  const end   = new Date(entry.endTime).toLocaleTimeString();
+  console.log(`${entry.title}: ${start} – ${end}`);
+}
+```
+
+---
+
+## fetchRadioNowPlaying
+
+Returns the track or show that is currently airing on the radio broadcast.
+This function does not require authentication and is safe to call from any
+client — including unauthenticated or public-facing pages. Returns `null` when
+no broadcast is currently active.
+
+### Signature
+
+```typescript
+fetchRadioNowPlaying(serverUrl: string): Promise<RadioNowPlaying | null>
+```
+
+### Parameters
+
+<ParamField body="serverUrl" type="string" required>
+  The base URL of your Synxed server.
+</ParamField>
+
+### Return type — `RadioNowPlaying | null`
+
+```typescript
+interface RadioNowPlaying {
+  title: string;
+  station: string;
+  isLive: boolean;
+}
+```
+
+<ResponseField name="title" type="string" required>
+  The title of the currently airing track or show segment.
+</ResponseField>
+
+<ResponseField name="station" type="string" required>
+  The name of the station that is broadcasting this content.
+</ResponseField>
+
+<ResponseField name="isLive" type="boolean" required>
+  `true` when the current broadcast is a live show rather than pre-recorded
+  scheduled content.
+</ResponseField>
+
+### Example
+
+```typescript
+import { fetchRadioNowPlaying } from "synxed-sdk";
+
+const nowPlaying = await fetchRadioNowPlaying("https://stream.example.com");
+
+if (nowPlaying) {
+  document.getElementById("now-playing-title")!.textContent = nowPlaying.title;
+  document.getElementById("now-playing-station")!.textContent = nowPlaying.station;
+  document.getElementById("live-badge")!.hidden = !nowPlaying.isLive;
+} else {
+  document.getElementById("now-playing-title")!.textContent = "Off air";
+}
+```
+
+<Warning>
+  Do not poll `fetchRadioNowPlaying` more frequently than every **10–15
+  seconds**. Polling faster than this can trigger rate limiting on the Synxed
+  server and degrade performance for all connected clients. If you need
+  real-time now-playing updates during an active playback session, subscribe to
+  the `stateChange` and `trackChange` events on a `SynxedPlayer` instance
+  instead.
+</Warning>
+
+<Tip>
+  You can use `fetchRadioNowPlaying` to power a lightweight public "on air"
+  widget — for example in a website header or a mobile app home screen — without
+  requiring the user to have an API key or an active player session.
+</Tip>

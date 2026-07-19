@@ -1,0 +1,463 @@
+---
+title: "SynxedPlayer — Programmatic Playback Control API"
+sidebarTitle: "SynxedPlayer"
+description: "Construct and control a headless Synxed playback session. Full access to play methods, transport controls, ad controls, voice hold, and player events."
+---
+
+`SynxedPlayer` is the headless playback engine that powers both the [`SynxedWebPlayer`](/reference/synxed-web-player) widget and your own custom player UIs. You instantiate it directly when you need fine-grained control over playback, want to build a bespoke interface, or need to wire up your own event handling. The class connects to a Synxed server, manages a licensed audio session, and emits a rich set of events you can subscribe to.
+
+## Constructor
+
+```typescript
+const player = new SynxedPlayer(config: SynxedConfig);
+```
+
+Constructs a new player instance. The player does not start playing or connect to the server until you call a play method (or set `autoConnect: true` to open the connection eagerly).
+
+### SynxedConfig
+
+<ParamField body="apiKey" type="string" required>
+  Your Synxed API key. Used to authenticate every request made during the
+  playback session.
+</ParamField>
+
+<ParamField body="serverUrl" type="string">
+  Base URL of your Synxed server. Omit this when using the Synxed managed
+  cloud; set it when pointing at a self-hosted deployment.
+</ParamField>
+
+<ParamField body="autoConnect" type="boolean">
+  When `true`, the SDK opens the WebSocket connection to the server immediately
+  on construction rather than waiting for the first play call. Useful when you
+  want to minimize latency on the first play action. Defaults to `false`.
+</ParamField>
+
+<ParamField body="resumePlayback" type="boolean">
+  When `true`, the player automatically resumes the listener's previous session
+  on connection. Requires a `listenerId` to be passed with each play call or
+  set on the voice options. Defaults to `false`.
+</ParamField>
+
+<ParamField body="gameContext" type="string">
+  An optional string tag that associates this playback session with a specific
+  context in your application — for example a game level name or scene
+  identifier. Used for analytics segmentation.
+</ParamField>
+
+<ParamField body="deviceType" type="string">
+  A label describing the playback device (e.g. `"desktop"`, `"mobile"`,
+  `"tv"`). Used for analytics and adaptive bitrate decisions on the server.
+</ParamField>
+
+<ParamField body="voice" type="Omit<VoiceHoldOptions, 'listenerId'>">
+  Voice-hold configuration for this player instance.
+
+  <Expandable title="Voice fields">
+    <ParamField body="enabled" type="boolean">
+      Enables the voice-hold feature. Requires microphone permission.
+    </ParamField>
+    <ParamField body="autoEndOnSilence" type="boolean">
+      Automatically ends recording after a period of silence detected in the
+      audio input.
+    </ParamField>
+    <ParamField body="maxDurationMs" type="number">
+      Maximum recording duration in milliseconds before the hold is ended
+      automatically.
+    </ParamField>
+  </Expandable>
+</ParamField>
+
+<ParamField body="debug" type="boolean">
+  Emits verbose diagnostic output to the console. Enable during development to
+  trace WebSocket messages and internal state transitions. Defaults to `false`.
+</ParamField>
+
+---
+
+## Play methods
+
+Each play method initiates a new licensed audio session. Calling any play
+method while another source is active stops the current source and begins the
+new one.
+
+### player.playSong(options)
+
+Streams a single licensed track by its catalog ID.
+
+```typescript
+player.playSong(options: PlaySongOptions): Promise<void>
+```
+
+<ParamField body="songId" type="string" required>
+  The unique identifier of the track to play.
+</ParamField>
+
+<ParamField body="listenerId" type="string">
+  A stable identifier for the current listener, used for session resumption and
+  analytics attribution.
+</ParamField>
+
+### player.playPlaylist(options)
+
+Streams an ordered playlist by its short code.
+
+```typescript
+player.playPlaylist(options: PlayPlaylistOptions): Promise<void>
+```
+
+<ParamField body="playlistCode" type="string" required>
+  The short alphanumeric code identifying the playlist (e.g. `"CHILL-2024"`).
+</ParamField>
+
+<ParamField body="listenerId" type="string">
+  A stable identifier for the current listener.
+</ParamField>
+
+### player.playMix(options)
+
+Streams a curated mix by its ID.
+
+```typescript
+player.playMix(options: PlayMixOptions): Promise<void>
+```
+
+<ParamField body="mixId" type="string" required>
+  The unique identifier of the mix to play. Use
+  [`fetchMixes`](/reference/discovery-helpers#fetchmixes) to retrieve available
+  mix IDs.
+</ParamField>
+
+<ParamField body="listenerId" type="string">
+  A stable identifier for the current listener.
+</ParamField>
+
+### player.playRadio(options)
+
+Tunes into the live radio broadcast.
+
+```typescript
+player.playRadio(options?: PlayRadioOptions): Promise<void>
+```
+
+<ParamField body="listenerId" type="string">
+  A stable identifier for the current listener.
+</ParamField>
+
+### player.playStation(options)
+
+Streams a specific radio station by its ID.
+
+```typescript
+player.playStation(options: PlayStationOptions): Promise<void>
+```
+
+<ParamField body="stationId" type="string" required>
+  The unique identifier of the station to play. Use
+  [`fetchStations`](/reference/discovery-helpers#fetchstations) to retrieve
+  available station IDs.
+</ParamField>
+
+<ParamField body="listenerId" type="string">
+  A stable identifier for the current listener.
+</ParamField>
+
+---
+
+## Transport controls
+
+### player.pause()
+
+Pauses playback without losing the current position.
+
+```typescript
+player.pause(): void
+```
+
+### player.resume()
+
+Resumes playback from the paused position.
+
+```typescript
+player.resume(): void
+```
+
+### player.stop()
+
+Stops playback and clears the current track. Unlike `pause()`, the playback
+position is not preserved.
+
+```typescript
+player.stop(): void
+```
+
+### player.skip()
+
+Advances to the next track in the current queue or playlist.
+
+```typescript
+player.skip(): void
+```
+
+### player.previous()
+
+Returns to the previous track in the current queue or playlist.
+
+```typescript
+player.previous(): void
+```
+
+### player.skipTo(index)
+
+Jumps directly to the track at the given zero-based position in the current
+queue.
+
+```typescript
+player.skipTo(index: number): void
+```
+
+### player.seek(ms)
+
+Seeks to the given position in the current track.
+
+```typescript
+player.seek(ms: number): void
+```
+
+The `ms` parameter is an absolute position in milliseconds. Query the
+current duration from the `stateChange` or `timeUpdate` events before
+seeking to avoid seeking past the end of the track.
+
+### player.setVolume(volume)
+
+Sets the playback volume.
+
+```typescript
+player.setVolume(volume: number): void
+```
+
+`volume` must be a number between `0` (silent) and `1` (full volume). Values
+outside this range are clamped.
+
+---
+
+## Ad controls
+
+Synxed may insert licensed ad breaks between tracks. Use these methods to
+manage ad playback interactions.
+
+### player.canSkipAd()
+
+Returns `true` if the current ad is eligible to be skipped at this moment.
+Check this before showing a skip button to avoid a no-op call.
+
+```typescript
+player.canSkipAd(): boolean
+```
+
+### player.skipAd()
+
+Skips the current ad if `canSkipAd()` returns `true`. Has no effect when
+called on a non-skippable ad.
+
+```typescript
+player.skipAd(): void
+```
+
+### player.clickAd()
+
+Registers a user click-through on the currently playing ad. Call this when the
+user taps the companion banner or any interactive ad element.
+
+```typescript
+player.clickAd(): void
+```
+
+<Note>
+  Calling `clickAd()` triggers the ad's click-through URL on the server side
+  for impression tracking. It does not navigate the browser — handle any URL
+  opening in your own UI layer.
+</Note>
+
+---
+
+## Voice hold controls
+
+Voice hold lets users issue natural-language commands (e.g. "play something
+relaxing") by holding a button while speaking. Enable it via the `voice` field
+in `SynxedConfig`.
+
+### player.beginVoiceHold(options)
+
+Starts a voice recording session. The SDK begins capturing microphone audio
+and sends it to the Synxed voice processing endpoint.
+
+```typescript
+player.beginVoiceHold(options: { listenerId: string }): Promise<void>
+```
+
+<ParamField body="listenerId" type="string" required>
+  The listener identifier to associate with this voice session. Must match the
+  `listenerId` used in your play calls for seamless session continuity.
+</ParamField>
+
+### player.endVoiceHold()
+
+Ends the voice recording session and submits the captured audio for
+processing. The player emits a `voiceResult` event when a result is ready.
+
+```typescript
+player.endVoiceHold(): void
+```
+
+### player.cancelVoiceHold()
+
+Cancels the active voice hold without submitting the audio. Use this when the
+user releases the button before any meaningful speech is detected.
+
+```typescript
+player.cancelVoiceHold(): void
+```
+
+### player.dismissVoiceAndResume()
+
+Dismisses any voice UI state and resumes audio playback if it was paused
+during the voice hold.
+
+```typescript
+player.dismissVoiceAndResume(): void
+```
+
+---
+
+## Lifecycle
+
+### player.destroy()
+
+Tears down the player instance: closes the WebSocket connection, stops
+playback, and removes all event listeners. Always call this when the owning
+component or view is unmounted to prevent memory leaks.
+
+```typescript
+player.destroy(): void
+```
+
+---
+
+## Events
+
+Subscribe to events using `player.on(event, handler)` and unsubscribe with
+`player.off(event, handler)`.
+
+```typescript
+player.on("stateChange", (state: PlayerState) => {
+  console.log("Status:", state.status);
+});
+```
+
+| Event | Payload type | Description |
+|---|---|---|
+| `stateChange` | `PlayerState` | Fires whenever the player's status, current track, time, volume, or duration changes. |
+| `timeUpdate` | `{ currentTime: number; duration: number }` | High-frequency position update during playback. Both values are in milliseconds. |
+| `trackChange` | `TrackInfo` | Fires when the active track changes — including on skip, previous, and queue advancement. |
+| `queueUpdated` | `TrackInfo[]` | Fires when the internal queue is rebuilt or reordered. |
+| `connected` | — | The WebSocket connection to the Synxed server was established successfully. |
+| `disconnected` | `string` (reason) | The connection was closed. The payload contains a human-readable reason string. |
+| `error` | `SynxedError \| Error` | An error occurred. See [Errors](/reference/errors) for the full error hierarchy. |
+| `adStart` | `{ campaignName: string; companionBannerUrl?: string }` | An ad break has started. Use `companionBannerUrl` to render an image banner. |
+| `adSkipUpdate` | `{ canSkip: boolean; countdownSeconds: number }` | Fires repeatedly during an ad to update skip eligibility and countdown UI. |
+| `adEnd` | `{ campaignName: string }` | The ad break has finished. |
+| `voiceStateChange` | `unknown` | Internal voice processing state changed. |
+| `voiceResult` | `{ transcript: string; playlistCode?: string; playlistName?: string }` | Voice processing completed. The SDK provides the recognized transcript and, when a matching playlist was found, its code and display name. |
+| `voiceSpeechStart` | — | The SDK detected the start of speech in the microphone input. |
+| `voiceSpeechEnd` | — | The SDK detected the end of speech in the microphone input. |
+| `voiceUserSpeakingChange` | `boolean` | Fires with `true` when the user starts speaking and `false` when they stop. Use this to animate a voice activity indicator. |
+
+---
+
+## Full usage example
+
+<CodeGroup>
+
+```typescript Basic setup
+import { SynxedPlayer } from "synxed-sdk";
+import type { PlayerState, TrackInfo } from "synxed-sdk";
+
+const player = new SynxedPlayer({
+  apiKey: "sk_live_xxxxxxxxxxxx",
+  serverUrl: "https://stream.example.com",
+  autoConnect: true,
+  resumePlayback: true,
+  debug: false,
+});
+
+player.on("connected", () => {
+  console.log("Connected — starting playlist");
+  player.playPlaylist({ playlistCode: "FOCUS-AM", listenerId: "user_789" });
+});
+
+player.on("stateChange", (state: PlayerState) => {
+  console.log(`[${state.status}]`, state.currentTrack?.title);
+});
+
+player.on("trackChange", (track: TrackInfo) => {
+  document.title = `${track.title} — ${track.artist}`;
+});
+
+player.on("error", (err) => {
+  console.error("Playback error:", err.message);
+});
+```
+
+```typescript Ad handling
+player.on("adStart", ({ campaignName, companionBannerUrl }) => {
+  showAdBanner(companionBannerUrl ?? null);
+  disableSkipButton();
+});
+
+player.on("adSkipUpdate", ({ canSkip, countdownSeconds }) => {
+  if (canSkip) {
+    enableSkipButton();
+  } else {
+    showCountdown(countdownSeconds);
+  }
+});
+
+player.on("adEnd", () => {
+  hideAdBanner();
+});
+
+skipButton.addEventListener("click", () => {
+  if (player.canSkipAd()) {
+    player.skipAd();
+  }
+});
+```
+
+```typescript Voice hold
+player.on("voiceResult", ({ transcript, playlistCode, playlistName }) => {
+  console.log("You said:", transcript);
+  if (playlistCode) {
+    player.playPlaylist({ playlistCode, listenerId: "user_789" });
+  }
+});
+
+micButton.addEventListener("pointerdown", () => {
+  player.beginVoiceHold({ listenerId: "user_789" });
+});
+
+micButton.addEventListener("pointerup", () => {
+  player.endVoiceHold();
+});
+
+micButton.addEventListener("pointerleave", () => {
+  player.cancelVoiceHold();
+});
+```
+
+</CodeGroup>
+
+<Tip>
+  For a zero-configuration drop-in player widget, see
+  [`SynxedWebPlayer`](/reference/synxed-web-player). Use `SynxedPlayer` when
+  you need full control over the UI and event lifecycle.
+</Tip>

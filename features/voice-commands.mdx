@@ -1,0 +1,173 @@
+---
+title: "Voice Commands for Music Playback Control"
+sidebarTitle: "Voice Commands"
+description: "Let users control music playback with their voice. Configure voice capture, respond to voice events, and build custom voice controls in your app."
+---
+
+Voice commands let your users control music playback hands-free — skipping tracks, selecting playlists, and more — by speaking to the player. Voice is enabled by default in `SynxedWebPlayer` and available as a configurable option in `SynxedPlayer`. The SDK never captures microphone audio without an explicit user gesture.
+
+<Warning>
+  Voice capture only starts after a user gesture (such as a button press) and requires the user to grant microphone permission in their browser. If either condition is not met, voice commands will not activate. Make sure `enableVoice` (or `voice.enabled`) is not set to `false`.
+</Warning>
+
+## SynxedWebPlayer Voice Options
+
+When mounting the built-in web player, you control voice behavior through the `enableVoice` and `voiceHoldMs` options.
+
+<Steps>
+  <Step title="Enable or disable voice">
+    Voice is on by default. Pass `enableVoice: false` to turn it off entirely.
+
+    <CodeGroup>
+      ```javascript Enable voice (default)
+      SynxedWebPlayer.mount({
+        apiKey: "YOUR_SYNXED_API_KEY",
+        source: { type: "playlist", playlistCode: "sxpl_YOUR_CODE" },
+        enableVoice: true,
+      });
+      ```
+
+      ```javascript Disable voice
+      SynxedWebPlayer.mount({
+        apiKey: "YOUR_SYNXED_API_KEY",
+        source: { type: "playlist", playlistCode: "sxpl_YOUR_CODE" },
+        enableVoice: false,
+      });
+      ```
+    </CodeGroup>
+  </Step>
+
+  <Step title="Adjust the hold delay">
+    Use `voiceHoldMs` to set how long (in milliseconds) the user must hold before voice capture begins. The default works well for most cases, but you can tune it to match your UI.
+
+    ```javascript
+    SynxedWebPlayer.mount({
+      apiKey: "YOUR_SYNXED_API_KEY",
+      source: { type: "playlist", playlistCode: "sxpl_YOUR_CODE" },
+      voiceHoldMs: 500,
+    });
+    ```
+  </Step>
+</Steps>
+
+## Custom Voice Controls
+
+If you use `SynxedPlayer` directly or want a fully custom UI, you can wire voice capture to any element using `beginVoiceHold`, `endVoiceHold`, `cancelVoiceHold`, and `dismissVoiceAndResume`.
+
+<Tip>
+  Always tie `beginVoiceHold` to a `pointerdown` event and `endVoiceHold` to `pointerup`. This keeps voice capture tightly coupled to a deliberate user gesture, which is both a browser requirement and a better user experience.
+</Tip>
+
+### DJ Button Example
+
+The example below attaches voice capture to a custom button element with the id `dj-button`.
+
+```javascript
+const djButton = document.getElementById("dj-button");
+if (!djButton) throw new Error("Missing #dj-button");
+
+djButton.addEventListener("pointerdown", () => {
+  void player.beginVoiceHold({ listenerId: "user_123" });
+});
+
+djButton.addEventListener("pointerup", () => {
+  void player.endVoiceHold();
+});
+```
+
+### Cancelling and Dismissing
+
+You have two additional controls for gracefully exiting a voice session:
+
+| Method | What it does |
+|---|---|
+| `player.cancelVoiceHold()` | Stops capture and discards any audio recorded so far — nothing is sent. |
+| `player.dismissVoiceAndResume()` | Dismisses the voice UI and immediately resumes playback. |
+
+```javascript
+// Discard captured audio without sending it
+player.cancelVoiceHold();
+
+// Close the voice UI and resume playback
+player.dismissVoiceAndResume();
+```
+
+## SynxedPlayer Voice Options
+
+When constructing `SynxedPlayer` directly, pass a `voice` configuration object to the constructor.
+
+```typescript
+const player = new SynxedPlayer({
+  apiKey: "YOUR_SYNXED_API_KEY",
+  autoConnect: true,
+  voice: {
+    enabled: true,
+    autoEndOnSilence: true,
+    maxDurationMs: 30000,
+  },
+});
+```
+
+<CardGroup cols={3}>
+  <Card title="enabled" icon="microphone">
+    Set to `true` to activate voice support. Set to `false` to disable it entirely.
+  </Card>
+  <Card title="autoEndOnSilence" icon="waveform">
+    When `true`, the SDK automatically ends capture once it detects the user has stopped speaking.
+  </Card>
+  <Card title="maxDurationMs" icon="clock">
+    The maximum duration of a single voice capture session in milliseconds. Use this as a safety ceiling (e.g. `30000` for 30 seconds).
+  </Card>
+</CardGroup>
+
+## Voice Events
+
+Subscribe to voice events on your player instance to update your UI or respond to results in real time.
+
+```javascript
+// Fires whenever the voice state changes
+player.on("voiceStateChange", (state) => {
+  console.log(state);
+});
+
+// Fires when a voice command is interpreted — includes the transcript and resolved playlist
+player.on("voiceResult", (result) => {
+  console.log(result.transcript);
+  console.log(result.playlistCode);
+  console.log(result.playlistName);
+});
+
+// Fires when the user starts speaking
+player.on("voiceSpeechStart", () => {
+  console.log("User started speaking");
+});
+
+// Fires when the user stops speaking
+player.on("voiceSpeechEnd", () => {
+  console.log("User stopped speaking");
+});
+```
+
+<CardGroup cols={2}>
+  <Card title="voiceStateChange" icon="toggle-on">
+    Emitted whenever the internal voice state transitions (e.g. idle → listening → processing). Use this to drive loading spinners or status indicators.
+  </Card>
+  <Card title="voiceResult" icon="circle-check">
+    Emitted after the SDK interprets a voice command. The result includes the raw `transcript` plus the resolved `playlistCode` and `playlistName`.
+  </Card>
+  <Card title="voiceSpeechStart" icon="play">
+    Emitted the moment speech is detected within an active voice hold session.
+  </Card>
+  <Card title="voiceSpeechEnd" icon="stop">
+    Emitted when the user stops speaking. If `autoEndOnSilence` is enabled, capture ends automatically at this point.
+  </Card>
+</CardGroup>
+
+## Troubleshooting
+
+If voice commands are not working, verify all of the following:
+
+- The user performed a gesture (e.g. pressed a button) before voice capture was attempted
+- The browser has been granted microphone permission
+- `enableVoice` or `voice.enabled` is not explicitly set to `false`
+- The page is running in a browser environment that supports microphone APIs (most modern browsers do over HTTPS)

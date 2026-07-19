@@ -1,0 +1,284 @@
+---
+title: "SynxedPlayer Events Reference"
+sidebarTitle: "Events"
+description: "Complete reference for all SynxedPlayer events: playback state, track changes, queue updates, connection status, errors, and voice commands."
+---
+
+`SynxedPlayer` is event-driven. Every change to playback state, track metadata, connection status, or voice activity emits a named event that you can subscribe to with `player.on(event, handler)`. Attach your listeners early — typically right after instantiation — so you never miss a transition.
+
+## All events at a glance
+
+| Event | Category | Description |
+|---|---|---|
+| `stateChange` | Playback | Fires whenever the player state changes (status, track, time, volume). |
+| `timeUpdate` | Playback | Fires periodically with the current playback position and duration. |
+| `trackChange` | Playback | Fires when the active track changes. |
+| `queueUpdated` | Playback | Fires when the playback queue is modified. |
+| `connected` | Connection | Fires when the SDK successfully connects to Synxed. |
+| `disconnected` | Connection | Fires when the SDK loses its connection. |
+| `error` | Connection | Fires when a recoverable or fatal error occurs. |
+| `adStart` | Ads | Fires when an ad begins. See the [Ads](/custom-player/ads) page. |
+| `adSkipUpdate` | Ads | Fires with skip countdown state while an ad is playing. |
+| `adEnd` | Ads | Fires when an ad ends. |
+| `voiceStateChange` | Voice | Fires when the voice pipeline state changes. |
+| `voiceResult` | Voice | Fires with the transcript and resolved playlist after a voice command. |
+| `voiceSpeechStart` | Voice | Fires when the user begins speaking. |
+| `voiceSpeechEnd` | Voice | Fires when the user stops speaking. |
+| `voiceUserSpeakingChange` | Voice | Fires with a boolean each time speaking state toggles. |
+
+---
+
+## Playback events
+
+### `stateChange`
+
+The primary event for syncing your player UI. Fires whenever any part of the player state changes — status, current track, playback position, or volume.
+
+```ts
+player.on("stateChange", (state) => {
+  console.log(state.status);        // "idle" | "loading" | "playing" | "paused" | "error"
+  console.log(state.currentTrack);  // TrackInfo | null
+  console.log(state.currentTime);   // number — milliseconds
+  console.log(state.duration);      // number — milliseconds
+  console.log(state.volume);        // number — 0 to 1
+});
+```
+
+| Field | Type | Description |
+|---|---|---|
+| `status` | `"idle" \| "loading" \| "playing" \| "paused" \| "error"` | The current playback status. |
+| `currentTrack` | `TrackInfo \| null` | Metadata for the track currently loaded. |
+| `currentTime` | `number` | Playback position in milliseconds. |
+| `duration` | `number` | Total track duration in milliseconds. |
+| `volume` | `number` | Current volume level between `0` and `1`. |
+
+### `timeUpdate`
+
+Fires at a regular interval during playback with the current position and total duration. Use this to drive a progress bar or timestamp display without re-rendering on every `stateChange`.
+
+```ts
+player.on("timeUpdate", ({ currentTime, duration }) => {
+  // Both values are in milliseconds
+  const percent = (currentTime / duration) * 100;
+  console.log(`${percent.toFixed(1)}% complete`);
+});
+```
+
+| Field | Type | Description |
+|---|---|---|
+| `currentTime` | `number` | Current playback position in milliseconds. |
+| `duration` | `number` | Total track duration in milliseconds. |
+
+### `trackChange`
+
+Fires each time the active track changes — on skip, auto-advance, or when a new play method is called. Use it to update album art, title, and artist displays.
+
+```ts
+player.on("trackChange", (track) => {
+  console.log(track.id);        // Unique track identifier
+  console.log(track.title);     // Track title
+  console.log(track.artist);    // Artist name
+  console.log(track.albumArt);  // URL to the album art image
+});
+```
+
+| Field | Type | Description |
+|---|---|---|
+| `id` | `string` | Unique Synxed track identifier. |
+| `title` | `string` | Track title. |
+| `artist` | `string` | Artist name. |
+| `albumArt` | `string` | URL to the album artwork image. |
+
+### `queueUpdated`
+
+Fires whenever the playback queue changes — typically at the start of a playlist or mix, or after a skip. The payload is the full updated array of tracks.
+
+```ts
+player.on("queueUpdated", (tracks) => {
+  console.log(`Queue has ${tracks.length} tracks`);
+  tracks.forEach((track, index) => {
+    console.log(`${index + 1}. ${track.title} — ${track.artist}`);
+  });
+});
+```
+
+---
+
+## Connection events
+
+### `connected`
+
+Fires once the SDK has successfully established its connection to the Synxed backend. If `autoConnect: true` is set, this fires shortly after instantiation.
+
+```ts
+player.on("connected", () => {
+  console.log("Connected to Synxed");
+});
+```
+
+### `disconnected`
+
+Fires when the connection drops. The `reason` string describes why — for example, a network interruption or an explicit `player.destroy()` call.
+
+```ts
+player.on("disconnected", (reason) => {
+  console.log("Disconnected:", reason);
+});
+```
+
+### `error`
+
+Fires when the SDK encounters an error. Import `SynxedError` to distinguish SDK-originated errors (which carry a `code` and an actionable `suggestion`) from unexpected runtime errors.
+
+```ts
+import { SynxedError } from "synxed-sdk";
+
+player.on("error", (error) => {
+  if (error instanceof SynxedError) {
+    console.error("Code:", error.code);
+    console.error("Message:", error.message);
+    console.info("Suggestion:", error.suggestion);
+    return;
+  }
+  // Unexpected error — log as-is
+  console.error(error);
+});
+```
+
+| Field | Type | Description |
+|---|---|---|
+| `code` | `string` | Machine-readable error code for programmatic handling. |
+| `message` | `string` | Human-readable description of the error. |
+| `suggestion` | `string \| undefined` | A recommended action to resolve the error, when available. |
+
+<Tip>
+  Always surface `error.suggestion` in your UI when it's present — it contains the most useful next step for the developer or user to take.
+</Tip>
+
+---
+
+## Voice events
+
+Voice events fire when the voice command pipeline is active. Enable it by passing `voice: { enabled: true }` to the `SynxedPlayer` constructor.
+
+### `voiceStateChange`
+
+Fires when the internal voice pipeline state changes — for example, moving from idle to listening, or from listening to processing.
+
+```ts
+player.on("voiceStateChange", (state) => {
+  console.log(state); // Current voice pipeline state object
+});
+```
+
+### `voiceResult`
+
+Fires after the voice pipeline processes a command and resolves it to a playlist. Use the `playlistCode` to immediately start playback.
+
+```ts
+player.on("voiceResult", (result) => {
+  console.log(result.transcript);    // What the user said
+  console.log(result.playlistCode);  // Resolved playlist code, e.g. "sxpl_..."
+  console.log(result.playlistName);  // Human-readable playlist name
+});
+```
+
+| Field | Type | Description |
+|---|---|---|
+| `transcript` | `string` | The raw transcribed text of what the user said. |
+| `playlistCode` | `string` | The Synxed playlist code resolved from the voice command. |
+| `playlistName` | `string` | The display name of the resolved playlist. |
+
+### `voiceSpeechStart`
+
+Fires the moment the SDK detects the user has begun speaking during a voice hold.
+
+```ts
+player.on("voiceSpeechStart", () => {
+  console.log("User started speaking");
+});
+```
+
+### `voiceSpeechEnd`
+
+Fires when the SDK detects the user has stopped speaking — either through silence detection (`autoEndOnSilence: true`) or reaching `maxDurationMs`.
+
+```ts
+player.on("voiceSpeechEnd", () => {
+  console.log("User stopped speaking");
+});
+```
+
+### `voiceUserSpeakingChange`
+
+A convenience event that fires with a `boolean` each time the speaking state toggles. Useful for driving a microphone activity indicator.
+
+```ts
+player.on("voiceUserSpeakingChange", (speaking) => {
+  if (speaking) {
+    console.log("Microphone is active");
+  } else {
+    console.log("Microphone is inactive");
+  }
+});
+```
+
+---
+
+## Attaching all listeners — full example
+
+The snippet below shows a recommended pattern for attaching every event listener once, immediately after player creation, before starting playback.
+
+```tsx
+import { useEffect, useMemo } from "react";
+import { SynxedError, SynxedPlayer } from "synxed-sdk";
+
+export function usePlayer(listenerId: string) {
+  const player = useMemo(
+    () =>
+      new SynxedPlayer({
+        apiKey: "YOUR_SYNXED_API_KEY",
+        autoConnect: true,
+        resumePlayback: true,
+        voice: { enabled: true, autoEndOnSilence: true, maxDurationMs: 30000 },
+      }),
+    [],
+  );
+
+  useEffect(() => {
+    // Playback
+    player.on("stateChange", (state) => console.log("Status:", state.status));
+    player.on("timeUpdate", ({ currentTime, duration }) =>
+      console.log(`${currentTime} / ${duration} ms`),
+    );
+    player.on("trackChange", (track) => console.log("Now playing:", track.title));
+    player.on("queueUpdated", (tracks) => console.log("Queue:", tracks.length, "tracks"));
+
+    // Connection
+    player.on("connected", () => console.log("Connected"));
+    player.on("disconnected", (reason) => console.log("Disconnected:", reason));
+    player.on("error", (err) => {
+      if (err instanceof SynxedError) {
+        console.error(err.code, err.message, err.suggestion);
+        return;
+      }
+      console.error(err);
+    });
+
+    // Voice
+    player.on("voiceStateChange", (state) => console.log("Voice state:", state));
+    player.on("voiceResult", (result) =>
+      console.log("Voice result:", result.transcript, "→", result.playlistName),
+    );
+    player.on("voiceSpeechStart", () => console.log("Speaking…"));
+    player.on("voiceSpeechEnd", () => console.log("Done speaking"));
+    player.on("voiceUserSpeakingChange", (speaking) => console.log("Speaking:", speaking));
+
+    void player.playPlaylist({ playlistCode: "sxpl_YOUR_CODE", listenerId });
+
+    return () => { player.destroy(); };
+  }, [player, listenerId]);
+
+  return player;
+}
+```

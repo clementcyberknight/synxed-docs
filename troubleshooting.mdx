@@ -1,0 +1,159 @@
+---
+title: "Troubleshooting Common Synxed SDK Issues"
+sidebarTitle: "Troubleshooting"
+description: "Diagnose and fix the most common issues you may encounter when integrating the Synxed SDK, from invisible players to voice capture failures."
+---
+
+If something is not working as expected, this page walks you through the most common issues and their fixes. Each section describes what causes the problem and the steps you need to take to resolve it.
+
+<AccordionGroup>
+
+  <Accordion title="The player is invisible">
+    The built-in player requires its own stylesheet to render correctly. If you skip this import, the player mounts in the DOM but has no visible styles — it appears blank or takes up zero space.
+
+    **Fix:** Import the player CSS at the top of your entry file or component:
+
+    ```js
+    import "synxed-sdk/player.css";
+    ```
+
+    If you have already added the import and the player is still not visible, check your app's own styles. Common culprits include:
+
+    - A parent container with `display: none`
+    - A wrapper element with `overflow: hidden` that clips the player
+    - A lower `z-index` that causes the player to render behind another element
+
+    Inspect the player element in your browser's DevTools and confirm it has non-zero dimensions and is not hidden by a computed style.
+  </Accordion>
+
+  <Accordion title="Playback does not start automatically">
+    Modern browsers enforce an autoplay policy that blocks audio from playing before the user has interacted with the page. This is a browser-level restriction, not an SDK bug — it applies to all web audio regardless of the library you use.
+
+    **Fix:** Trigger playback from inside a user gesture handler such as a click, tap, or keypress:
+
+    ```js
+    document.getElementById("play-button").addEventListener("click", () => {
+      player.play();
+    });
+    ```
+
+    <Note>
+      Test autoplay behavior across your target browsers. Policies vary between Chrome, Safari, Firefox, and mobile WebViews. Safari in particular requires a direct gesture chain with no async gaps before the audio call.
+    </Note>
+  </Accordion>
+
+  <Accordion title='I get "Synxed apiKey is required"'>
+    This error is thrown when you instantiate `SynxedPlayer` without providing an API key, or when the value you pass is an empty string or `undefined`.
+
+    **Fix:** Pass a valid, non-empty API key when you create the player:
+
+    ```js
+    const player = new SynxedPlayer({
+      apiKey: "YOUR_SYNXED_API_KEY",
+    });
+    ```
+
+    <Warning>
+      Keep your API key browser-safe. It is intended for use in client-side SDK code, but you should never expose private backend secrets alongside it. If you suspect your key has been compromised, regenerate it from your Synxed dashboard.
+    </Warning>
+  </Accordion>
+
+  <Accordion title="I get an invalid serverUrl error">
+    This error occurs when the `serverUrl` option is set to a value that is not a valid HTTP or HTTPS URL — for example, a bare hostname, a path without a scheme, or an empty string.
+
+    **Fix:** Either remove `serverUrl` entirely to use the production default, or pass a fully qualified URL including the scheme:
+
+    ```js
+    // Use the production default (recommended for live apps)
+    const player = new SynxedPlayer({
+      apiKey: "YOUR_SYNXED_API_KEY",
+    });
+
+    // Or point to a specific backend
+    const player = new SynxedPlayer({
+      apiKey: "YOUR_SYNXED_API_KEY",
+      serverUrl: "https://api.synxed.com",
+    });
+    ```
+
+    <Tip>
+      The `serverUrl` option is intended for staging environments, local development, or self-hosted backends. Remove it before shipping to production unless you are running your own Synxed backend.
+    </Tip>
+  </Accordion>
+
+  <Accordion title="Resume playback does not work">
+    Resumable playback depends on several conditions all being true at once. If any one of them is missing or incorrect, the SDK starts a fresh session instead of resuming from a checkpoint.
+
+    **Fix:** Verify all of the following:
+
+    - `resumePlayback: true` is set in your player options
+    - You are passing the **same `listenerId`** that was used in the previous session
+    - The content source is a **song, playlist, or mix** — live radio and scheduled stations cannot be resumed (see the next section)
+    - The saved checkpoint has not expired
+    - The browser has access to `localStorage` and it has not been cleared
+
+    ```js
+    const player = new SynxedPlayer({
+      apiKey: "YOUR_SYNXED_API_KEY",
+      listenerId: "listener-abc-123",
+      resumePlayback: true,
+    });
+    ```
+
+    <Note>
+      Use a stable, consistent `listenerId` tied to your user's identity or session. Generating a new ID on every page load defeats the resume mechanism.
+    </Note>
+  </Accordion>
+
+  <Accordion title="Live radio or scheduled stations do not resume">
+    This is expected behavior, not a bug. Live radio streams and scheduled stations are always live — there is no meaningful position to resume from because the broadcast moves forward in real time regardless of whether the listener is connected.
+
+    When a listener reconnects to a live radio station or scheduled station, they join the stream at the current live position. If you need resumable playback, use a song, playlist, or mix as your content source instead.
+  </Accordion>
+
+  <Accordion title="Voice does not start">
+    Voice capture has several hard requirements that must all be satisfied before it can activate. If any one of them is missing, voice input silently fails or throws an error.
+
+    **Fix:** Confirm that all of the following conditions are met:
+
+    - Voice was triggered from a **user gesture** (click, tap, or keypress)
+    - The user has granted **microphone permission** in the browser
+    - You have not set `enableVoice: false` or `voice.enabled: false` in your configuration
+    - Your app is running in a **browser environment** that exposes microphone APIs (voice is not available in Node.js or non-browser runtimes)
+
+    ```js
+    const player = new SynxedPlayer({
+      apiKey: "YOUR_SYNXED_API_KEY",
+      enableVoice: true,
+    });
+
+    document.getElementById("mic-button").addEventListener("click", () => {
+      player.startVoice();
+    });
+    ```
+
+    <Warning>
+      Microphone access requires the page to be served over HTTPS in production. Browsers block `getUserMedia` on insecure origins. Make sure your deployment uses a valid TLS certificate.
+    </Warning>
+  </Accordion>
+
+  <Accordion title="Skip does nothing">
+    The skip action is designed for playlists and mixes, where there is a defined sequence of tracks to advance through. It has no effect on live radio or scheduled stations, because those streams have no concept of a next track — they are continuous broadcasts.
+
+    Additionally, skipping during an ad is restricted until the ad skip countdown reaches zero. This is an intentional licensing constraint.
+
+    **Fix:**
+
+    - Confirm your content source is a **playlist or mix**, not live radio or a scheduled station
+    - If an ad is playing, wait for the skip countdown to reach zero before calling skip
+    - Disable or hide the skip control in your UI when the current source does not support skipping
+
+    ```js
+    player.on("stateChange", (state) => {
+      const canSkip = state.sourceType === "playlist" || state.sourceType === "mix";
+      skipButton.disabled = !canSkip;
+    });
+    ```
+  </Accordion>
+
+</AccordionGroup>

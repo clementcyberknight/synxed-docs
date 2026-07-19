@@ -1,0 +1,170 @@
+---
+title: "Add Synxed Music Playback to a Next.js App"
+sidebarTitle: "Next.js"
+description: "Integrate the SynxedWebPlayer into Next.js using a client component, the use client directive, and a NEXT_PUBLIC_ environment variable."
+---
+
+Next.js runs components on the server by default, but the Synxed Web Player requires browser APIs such as the DOM and Web Audio. To use the player in a Next.js project you create a dedicated **client component**, mark it with the `"use client"` directive, and read your API key from a `NEXT_PUBLIC_` environment variable so it is safely available in the browser bundle.
+
+## Prerequisites
+
+Install the Synxed SDK before you begin:
+
+```bash
+npm install synxed-sdk
+```
+
+## Configure your API key
+
+Add your Synxed API key to your local environment file. Next.js exposes variables prefixed with `NEXT_PUBLIC_` to the browser bundle at build time.
+
+```bash
+# .env.local
+NEXT_PUBLIC_SYNXED_API_KEY=your_api_key_here
+```
+
+<Warning>
+  Only expose keys that are safe to be public using the `NEXT_PUBLIC_` prefix. Never place private backend secrets — such as signing keys or server-side tokens — in client components. Anyone who visits your site can read values embedded in the browser bundle.
+</Warning>
+
+## Create the client component
+
+<Steps>
+
+<Step title="Add the use client directive">
+
+The `"use client"` directive must be the very first line of the file. It tells Next.js to exclude this module from server-side rendering and treat it as a browser-only component.
+
+<Note>
+  The Synxed player relies on browser APIs that are not available during server-side rendering (SSR) or in React Server Components. Without `"use client"`, Next.js will attempt to execute the player code on the server and throw a runtime error.
+</Note>
+
+```tsx
+"use client";
+```
+
+</Step>
+
+<Step title="Import the SDK and React hooks">
+
+```tsx
+import { useEffect, useRef } from "react";
+import "synxed-sdk/player.css";
+import { SynxedWebPlayer } from "synxed-sdk";
+```
+
+</Step>
+
+<Step title="Mount the player in useEffect">
+
+Read the API key from `process.env.NEXT_PUBLIC_SYNXED_API_KEY` and mount the player after the component has been added to the DOM. Return a cleanup function that destroys the player on unmount.
+
+```tsx
+export default function SynxedClientPlayer() {
+  const playerRef = useRef<SynxedWebPlayer | null>(null);
+
+  useEffect(() => {
+    playerRef.current = SynxedWebPlayer.mount({
+      apiKey: process.env.NEXT_PUBLIC_SYNXED_API_KEY!,
+      source: { type: "radio" },
+    });
+
+    return () => {
+      playerRef.current?.destroy();
+      playerRef.current = null;
+    };
+  }, []);
+
+  return null;
+}
+```
+
+</Step>
+
+</Steps>
+
+## Complete component
+
+```tsx
+"use client";
+
+import { useEffect, useRef } from "react";
+import "synxed-sdk/player.css";
+import { SynxedWebPlayer } from "synxed-sdk";
+
+export default function SynxedClientPlayer() {
+  const playerRef = useRef<SynxedWebPlayer | null>(null);
+
+  useEffect(() => {
+    playerRef.current = SynxedWebPlayer.mount({
+      apiKey: process.env.NEXT_PUBLIC_SYNXED_API_KEY!,
+      source: { type: "radio" },
+    });
+
+    return () => {
+      playerRef.current?.destroy();
+      playerRef.current = null;
+    };
+  }, []);
+
+  return null;
+}
+```
+
+## Add the component to a layout
+
+Import `SynxedClientPlayer` into your root layout so the player is present on every page. Because the component is marked `"use client"`, Next.js handles the boundary automatically — the rest of your layout can remain a server component.
+
+<Tabs>
+
+<Tab title="App Router (app/layout.tsx)">
+
+```tsx
+import SynxedClientPlayer from "@/components/SynxedClientPlayer";
+
+export default function RootLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
+  return (
+    <html lang="en">
+      <body>
+        <SynxedClientPlayer />
+        {children}
+      </body>
+    </html>
+  );
+}
+```
+
+</Tab>
+
+<Tab title="Pages Router (_app.tsx)">
+
+```tsx
+import type { AppProps } from "next/app";
+import SynxedClientPlayer from "@/components/SynxedClientPlayer";
+
+export default function MyApp({ Component, pageProps }: AppProps) {
+  return (
+    <>
+      <SynxedClientPlayer />
+      <Component {...pageProps} />
+    </>
+  );
+}
+```
+
+</Tab>
+
+</Tabs>
+
+<CardGroup cols={2}>
+  <Card title="React" icon="react" href="/frameworks/react">
+    Using Synxed in a plain React application
+  </Card>
+  <Card title="Vue" icon="v" href="/frameworks/vue">
+    Using Synxed inside a Vue 3 component with the Composition API
+  </Card>
+</CardGroup>

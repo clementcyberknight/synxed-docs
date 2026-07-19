@@ -1,20 +1,78 @@
 ---
-title: "Introduction"
-description: "Welcome to your project"
+title: "Synxed: Licensed Music Playback for Your App"
+sidebarTitle: "Home"
+description: "Add licensed music — songs, playlists, mixes, live radio, and scheduled stations — to any website, game, or app with the Synxed SDK."
 ---
 
-Write a short description of your product here. What it does, who it's for, and what they can accomplish with it.
+Synxed gives developers a simple SDK to embed licensed music playback directly into their applications. Whether you need a drop-in floating player or a fully custom UI built from scratch, Synxed handles licensing, streaming, ads, voice commands, and resumable playback — so you can focus on building.
 
-<Tip>
-  Ready to make this your own? Start by editing this page. Update your `docs.json` file to customize your site. Then fill out the [Quickstart](/quickstart) page.
-</Tip>
+<CardGroup cols={2}>
+  <Card title="Quick Start" icon="rocket" href="/quickstart">
+    Install the SDK and play your first track in under five minutes.
+  </Card>
+  <Card title="Built-In Player" icon="circle-play" href="/web-player/overview">
+    Drop a fully-featured floating music player into your app with one function call.
+  </Card>
+  <Card title="Custom Player" icon="sliders" href="/custom-player/overview">
+    Build your own controls and UI using the low-level SynxedPlayer API.
+  </Card>
+  <Card title="SDK Reference" icon="book" href="/reference/synxed-web-player">
+    Explore every option, type, and method in the Synxed SDK.
+  </Card>
+</CardGroup>
 
-<Card title="Quickstart" icon="rocket" href="/quickstart">
-  This card links to the quickstart page in your project.
-</Card>
-<Card title="Components" icon="puzzle-piece" href="https://mintlify.com/docs/components">
-  Add cards, callouts, steps, tabs, and more to design and structure your pages.
-</Card>
-<Card title="Settings" icon="gear" href="https://mintlify.com/docs/organize/settings">
-  Set your site name, branding, and navigation in the `docs.json` file.
-</Card>
+## How It Works
+
+Synxed authenticates your app with an API key from the [Synxed Portal](https://portal.synxed.com). You choose a source — a song ID, playlist code, mix ID, live radio, or station — and the SDK handles everything else.
+
+<Steps>
+  <Step title="Get your API key">
+    Sign up at [portal.synxed.com](https://portal.synxed.com) and copy your API key.
+  </Step>
+  <Step title="Install the SDK">
+    ```bash
+    npm install synxed-sdk
+    ```
+  </Step>
+  <Step title="Mount the player">
+    ```ts
+    import "synxed-sdk/player.css";
+    import { SynxedWebPlayer } from "synxed-sdk";
+
+    SynxedWebPlayer.mount({
+      apiKey: "YOUR_SYNXED_API_KEY",
+      source: { type: "playlist", playlistCode: "sxpl_YOUR_CODE" },
+    });
+    ```
+  </Step>
+  <Step title="Ship it">
+    Call `player.destroy()` on unmount and you're done. See the [production checklist](/production-checklist) for best practices.
+  </Step>
+</Steps>
+
+## What You Can Play
+
+<CardGroup cols={3}>
+  <Card title="Songs" icon="music">
+    Play individual licensed tracks by song ID.
+  </Card>
+  <Card title="Playlists" icon="list-music">
+    Stream curated playlists using a playlist code.
+  </Card>
+  <Card title="Mixes" icon="shuffle">
+    Play algorithmically curated mixes by mix ID.
+  </Card>
+  <Card title="Live Radio" icon="radio">
+    Tune in to live radio — no resume timestamps.
+  </Card>
+  <Card title="Stations" icon="tower-broadcast">
+    Stream scheduled station content continuously.
+  </Card>
+  <Card title="Voice Control" icon="microphone">
+    Let users control playback with their voice.
+  </Card>
+</CardGroup>
+
+## Choose Your Integration Style
+
+Not sure where to start? See the [Choosing an API](/choosing-an-api) guide to decide between the built-in `SynxedWebPlayer` and the low-level `SynxedPlayer`.

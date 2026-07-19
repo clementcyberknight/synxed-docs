@@ -1,0 +1,87 @@
+---
+title: "Show What's Playing on Radio Right Now"
+sidebarTitle: "Now Playing"
+description: "Fetch the current radio now-playing info — track title, station name, and live status — and keep your UI in sync by polling on a safe interval."
+---
+
+The `fetchRadioNowPlaying` helper returns a snapshot of what's currently on air: the track title, the station name, and whether the broadcast is live. Because radio streams change continuously, you'll typically poll this function on a fixed interval to keep your UI up to date. It's a standalone utility — import it directly from `synxed-sdk`.
+
+<Warning>
+  Do not poll `fetchRadioNowPlaying` faster than every 10–15 seconds in production. Polling too aggressively wastes bandwidth for your users and may result in rate limiting on your API key.
+</Warning>
+
+## Import and Basic Usage
+
+```typescript
+import { fetchRadioNowPlaying } from "synxed-sdk";
+
+const info = await fetchRadioNowPlaying("https://api.synxed.com");
+
+if (info) {
+  console.log(info.title);    // e.g. "Midnight Drive"
+  console.log(info.station);  // e.g. "SmoothFM"
+  console.log(info.isLive);   // true or false
+}
+```
+
+The function returns `null` when there is nothing currently playing, so always check for a truthy value before accessing fields.
+
+### Response Fields
+
+| Field | Type | Description |
+|---|---|---|
+| `title` | `string` | The title of the currently playing track or programme |
+| `station` | `string` | The name of the station that is on air |
+| `isLive` | `boolean` | `true` if the station is broadcasting live right now |
+
+## Displaying Now-Playing Info in Your UI
+
+The example below fetches now-playing data immediately on page load, then refreshes it every 15 seconds and updates the DOM.
+
+```typescript
+import { fetchRadioNowPlaying } from "synxed-sdk";
+
+const titleEl = document.getElementById("now-playing-title");
+const stationEl = document.getElementById("now-playing-station");
+const liveBadgeEl = document.getElementById("now-playing-live");
+
+async function updateNowPlaying(): Promise<void> {
+  const info = await fetchRadioNowPlaying("https://api.synxed.com");
+
+  if (info) {
+    if (titleEl) titleEl.textContent = info.title;
+    if (stationEl) stationEl.textContent = info.station;
+    if (liveBadgeEl) liveBadgeEl.hidden = !info.isLive;
+  } else {
+    if (titleEl) titleEl.textContent = "Nothing playing right now";
+    if (stationEl) stationEl.textContent = "";
+    if (liveBadgeEl) liveBadgeEl.hidden = true;
+  }
+}
+
+// Fetch immediately, then poll every 15 seconds
+await updateNowPlaying();
+const intervalId = setInterval(() => void updateNowPlaying(), 15_000);
+
+// Call clearInterval(intervalId) when the component unmounts or the page unloads
+```
+
+<Tip>
+  Store the return value of `setInterval` so you can call `clearInterval` when the page unloads or the component unmounts. This prevents dangling intervals and unnecessary API calls after the user has navigated away.
+</Tip>
+
+## Checking Live Status
+
+Use `isLive` to conditionally show a live badge or indicator in your UI. When `isLive` is `false`, the station may be playing pre-recorded or scheduled content rather than a live broadcast.
+
+```typescript
+const info = await fetchRadioNowPlaying("https://api.synxed.com");
+
+if (info?.isLive) {
+  console.log(`🔴 Live on ${info.station}: ${info.title}`);
+} else if (info) {
+  console.log(`🎵 Now playing on ${info.station}: ${info.title}`);
+} else {
+  console.log("No active broadcast.");
+}
+```

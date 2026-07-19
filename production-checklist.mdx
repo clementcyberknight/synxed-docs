@@ -1,0 +1,170 @@
+---
+title: "Production Checklist for the Synxed SDK"
+sidebarTitle: "Checklist"
+description: "A grouped checklist of everything you should verify before shipping a Synxed SDK integration to production, with explanations for each item."
+---
+
+Before you go live, run through this checklist to make sure your Synxed integration is secure, stable, and behaving correctly for end users. Each item includes a brief explanation of why it matters — not just what to do.
+
+---
+
+## Styling & Assets
+
+<Steps>
+
+  <Step title="Import the player stylesheet">
+    If you are using the built-in Synxed player UI, import its stylesheet in your entry file:
+
+    ```js
+    import "synxed-sdk/player.css";
+    ```
+
+    Without this import the player mounts with no visible styles. It will appear blank or invisible, even though it is present in the DOM.
+  </Step>
+
+</Steps>
+
+---
+
+## Security
+
+<Steps>
+
+  <Step title="Use an API key that is safe for browser exposure">
+    Your `apiKey` is intended for client-side SDK usage and is safe to include in browser code. Make sure you are using the correct key type from your Synxed dashboard — one scoped for SDK access, not a private backend secret.
+  </Step>
+
+  <Step title="Never expose private backend secrets in client code">
+    Do not bundle server-side credentials, private API tokens, or secret keys into your frontend build. If a secret ever ends up in client code, rotate it immediately. Browser bundles are publicly readable.
+  </Step>
+
+  <Step title="Serve your app over HTTPS">
+    HTTPS is required for microphone access (`getUserMedia`), and it is strongly recommended for all audio streaming. Browsers block or degrade several browser APIs on insecure origins. Use a valid TLS certificate in every production environment.
+
+    <Warning>
+      Deploying over plain HTTP will break voice features and may cause unexpected behavior in other areas that rely on secure contexts.
+    </Warning>
+  </Step>
+
+  <Step title="Remove or restrict serverUrl">
+    The `serverUrl` option is intended for staging, local development, or self-hosted Synxed backends only. Remove it before deploying to production so the SDK uses the correct production endpoint by default.
+
+    ```js
+    // Production — omit serverUrl entirely
+    const player = new SynxedPlayer({
+      apiKey: "YOUR_SYNXED_API_KEY",
+    });
+    ```
+
+    <Note>
+      If you do need to point at a custom backend in production, pass a full HTTPS URL. A bare hostname or incomplete URL will throw an error.
+    </Note>
+  </Step>
+
+</Steps>
+
+---
+
+## Lifecycle Management
+
+<Steps>
+
+  <Step title="Call destroy() when the player unmounts">
+    When you remove the player from the page — for example, when a React component unmounts or a view is destroyed — call `player.destroy()`. This releases audio resources, clears event listeners, and prevents memory leaks.
+
+    ```js
+    // React example
+    useEffect(() => {
+      const player = new SynxedPlayer({ apiKey: "YOUR_SYNXED_API_KEY" });
+      return () => {
+        player.destroy();
+      };
+    }, []);
+    ```
+
+    Skipping `destroy()` can cause stale listeners and audio contexts to pile up, especially in single-page applications where views mount and unmount frequently.
+  </Step>
+
+  <Step title="Handle error, disconnected, and stateChange events">
+    If you build a custom player UI, subscribe to the SDK's lifecycle events. Without these handlers, your UI can get out of sync with actual playback state — showing a play button while audio is buffering, or showing nothing when an error has occurred.
+
+    ```js
+    player.on("error", (err) => console.error("Playback error:", err));
+    player.on("disconnected", () => updateUI("disconnected"));
+    player.on("stateChange", (state) => syncUIToState(state));
+    ```
+  </Step>
+
+</Steps>
+
+---
+
+## Resumable Playback
+
+<Steps>
+
+  <Step title="Use a stable listenerId for resumable sessions">
+    If you enable `resumePlayback`, the SDK saves a checkpoint tied to the `listenerId` you provide. Use an ID that is consistent across sessions for the same user — such as a hashed user ID or a persisted device token. A new random ID on every page load means the resume checkpoint is never found.
+
+    ```js
+    const player = new SynxedPlayer({
+      apiKey: "YOUR_SYNXED_API_KEY",
+      listenerId: "user-stable-id-here",
+      resumePlayback: true,
+    });
+    ```
+  </Step>
+
+  <Step title="Disable resumePlayback when a fresh start is required">
+    There are cases where you want playback to start from the beginning — a new campaign launch, a first-time user experience, or an explicit user action to restart. In those cases, set `resumePlayback: false` (or omit it) so the SDK does not attempt to load a saved checkpoint.
+
+    <Tip>
+      You can conditionally set `resumePlayback` based on your own application logic, such as a user preference or a flag stored server-side.
+    </Tip>
+  </Step>
+
+</Steps>
+
+---
+
+## Performance & Polling
+
+<Steps>
+
+  <Step title="Do not poll radio metadata more than every 10–15 seconds">
+    If you fetch metadata for a live radio station (such as the current track title or artwork), do not poll more frequently than once every 10–15 seconds. Excessive polling increases load on the metadata service and provides no meaningful benefit — track changes on live radio do not happen faster than that in practice.
+
+    ```js
+    setInterval(() => {
+      player.getRadioMetadata().then(updateNowPlaying);
+    }, 12000); // 12 seconds — within the recommended range
+    ```
+  </Step>
+
+</Steps>
+
+---
+
+## Autoplay & Voice
+
+<Steps>
+
+  <Step title="Test autoplay behavior in your target browsers">
+    Browser autoplay policies differ across Chrome, Firefox, Safari, and mobile WebViews. Always test your integration in the specific browsers your users will run. In most cases, you need to trigger initial playback from a direct user gesture — a click, tap, or keypress.
+
+    <Note>
+      Safari is the strictest: it blocks audio even if there is an async gap between the user gesture and the audio API call. Keep the gesture-to-play chain synchronous where possible.
+    </Note>
+  </Step>
+
+  <Step title="Tie voice flows to user gestures">
+    Voice capture must be initiated from a user gesture for the same reason as autoplay — browsers require a direct interaction before granting microphone access. Do not attempt to start voice capture on page load or from a timer. Wire it to a button click or equivalent interaction.
+
+    ```js
+    document.getElementById("mic-button").addEventListener("click", () => {
+      player.startVoice();
+    });
+    ```
+  </Step>
+
+</Steps>

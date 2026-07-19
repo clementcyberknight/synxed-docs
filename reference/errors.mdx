@@ -1,0 +1,195 @@
+---
+title: "Synxed SDK Error Classes and Handling Patterns"
+sidebarTitle: "Errors"
+description: "Reference for SynxedError and its four subclasses. Learn the error properties, how to catch typed errors, and what typically causes each error class."
+---
+
+The Synxed SDK uses a structured error hierarchy rooted at `SynxedError`. Every error the SDK emits is an instance of this base class or one of its four subclasses, so you can write typed error handlers that respond differently to configuration problems, connectivity failures, playback faults, and protocol violations. Each error also carries a `suggestion` field and a `docsUrl` so your end users or support team can get actionable next steps directly from the thrown value.
+
+## Importing error classes
+
+```typescript
+import {
+  SynxedError,
+  SynxedConfigurationError,
+  SynxedConnectionError,
+  SynxedPlaybackError,
+  SynxedProtocolError,
+} from "synxed-sdk";
+```
+
+---
+
+## SynxedError (base class)
+
+All SDK errors extend `SynxedError`. You can catch this type to handle any SDK error generically without knowing the specific subclass.
+
+```typescript
+class SynxedError extends Error {
+  code: string;
+  message: string;
+  suggestion: string;
+  docsUrl: string;
+}
+```
+
+### Properties
+
+<ResponseField name="code" type="string" required>
+  A machine-readable error code string (e.g. `"INVALID_API_KEY"`,
+  `"CONNECTION_TIMEOUT"`). Use this in logging pipelines and error monitoring
+  tools to group related errors without parsing the human-readable `message`.
+</ResponseField>
+
+<ResponseField name="message" type="string" required>
+  A human-readable description of what went wrong. Suitable for developer
+  consoles and internal logging; avoid surfacing raw `message` strings directly
+  to end users without sanitization.
+</ResponseField>
+
+<ResponseField name="suggestion" type="string" required>
+  An actionable hint describing the most likely fix (e.g. `"Check that your
+  apiKey is correctly set in SynxedConfig."`). Display this alongside the
+  error in development overlays or support tooling.
+</ResponseField>
+
+<ResponseField name="docsUrl" type="string" required>
+  A URL pointing to the relevant section of the Synxed documentation for this
+  error type. Embed this in error reporting dashboards to give developers a
+  direct path to the fix.
+</ResponseField>
+
+---
+
+## Subclasses
+
+### SynxedConfigurationError
+
+Thrown when the SDK is initialised with invalid or missing configuration. These
+errors surface before any network connection is attempted, making them easy to
+catch during development.
+
+```typescript
+class SynxedConfigurationError extends SynxedError {}
+```
+
+### SynxedConnectionError
+
+Thrown when the SDK cannot establish or maintain a WebSocket connection to the
+Synxed server. This includes initial connection failures, unexpected drops, and
+authentication rejections at the transport layer.
+
+```typescript
+class SynxedConnectionError extends SynxedError {}
+```
+
+### SynxedPlaybackError
+
+Thrown when a licensed audio session fails to start, stalls unrecoverably, or
+encounters a licensing barrier (e.g. a track that is unavailable in the
+listener's region).
+
+```typescript
+class SynxedPlaybackError extends SynxedError {}
+```
+
+### SynxedProtocolError
+
+Thrown when the SDK receives a response from the server that does not conform
+to the expected Synxed protocol. This typically indicates a version mismatch
+between the SDK and the server.
+
+```typescript
+class SynxedProtocolError extends SynxedError {}
+```
+
+---
+
+## Error cause reference
+
+| Error class | Typical cause |
+|---|---|
+| `SynxedConfigurationError` | Missing or malformed `apiKey`; invalid `serverUrl` format; incompatible option combinations. |
+| `SynxedConnectionError` | Network unavailable; server unreachable; WebSocket handshake rejected; API key refused at transport layer. |
+| `SynxedPlaybackError` | Track or playlist not found; content geo-blocked for the listener; license capacity exceeded; audio stream interrupted. |
+| `SynxedProtocolError` | Server returned an unrecognized message format; SDK/server version incompatibility; malformed server response. |
+
+---
+
+## Handling errors via the error event
+
+The primary way to handle runtime errors is by subscribing to the `error` event on a `SynxedPlayer` instance. The payload is typed as `SynxedError | Error` to cover both SDK-specific faults and unexpected JavaScript errors.
+
+```typescript
+import {
+  SynxedError,
+  SynxedConfigurationError,
+  SynxedConnectionError,
+  SynxedPlaybackError,
+  SynxedProtocolError,
+} from "synxed-sdk";
+
+player.on("error", (err) => {
+  if (!(err instanceof SynxedError)) {
+    // Unexpected non-SDK error — rethrow or log as a bug
+    console.error("Unexpected error:", err);
+    return;
+  }
+
+  // All SynxedError subclasses share code, suggestion, and docsUrl
+  console.error(`[${err.code}] ${err.message}`);
+  console.info("Suggestion:", err.suggestion);
+  console.info("Docs:", err.docsUrl);
+});
+```
+
+---
+
+## instanceof checks for specific error types
+
+When you need to respond differently to different failure modes — for example by
+showing a reconnect button for connection errors but a "track unavailable"
+message for playback errors — use `instanceof` to branch on the subclass.
+
+```typescript
+player.on("error", (err) => {
+  if (err instanceof SynxedConfigurationError) {
+    // Surface to the developer; not recoverable at runtime
+    throw err;
+  }
+
+  if (err instanceof SynxedConnectionError) {
+    showToast("Connection lost. Trying to reconnect…");
+    scheduleReconnect();
+    return;
+  }
+
+  if (err instanceof SynxedPlaybackError) {
+    showToast("This track is unavailable in your region.");
+    player.skip();
+    return;
+  }
+
+  if (err instanceof SynxedProtocolError) {
+    showToast("A server compatibility issue occurred. Please update the SDK.");
+    console.error("Protocol error:", err.code, err.docsUrl);
+    return;
+  }
+
+  // Fallback for generic SynxedError or unknown Error
+  console.error("Unhandled playback error:", err);
+});
+```
+
+<Warning>
+  `SynxedConfigurationError` is almost always a developer mistake — a missing
+  or wrong `apiKey`, or an invalid `serverUrl`. These errors will surface at
+  construction or on the first play call. Fix the configuration before shipping
+  to production; do not swallow them silently.
+</Warning>
+
+<Note>
+  `instanceof` checks work correctly across module boundaries as long as you
+  import the error classes from `synxed-sdk` rather than subclassing or
+  re-exporting them yourself.
+</Note>

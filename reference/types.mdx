@@ -1,0 +1,224 @@
+---
+title: "Synxed SDK TypeScript Type Reference"
+sidebarTitle: "Types"
+description: "Complete reference for all public TypeScript interfaces in the Synxed SDK, including PlayerState, TrackInfo, and the five play-options types."
+---
+
+This page documents every public TypeScript interface exported from `synxed-sdk`. Each type is shown as a code block so you can copy it directly into your project, followed by field-level descriptions. All types are re-exported from the package root, so you can import them with a single destructured import.
+
+```typescript
+import type {
+  PlayerState,
+  TrackInfo,
+  PlaySongOptions,
+  PlayPlaylistOptions,
+  PlayMixOptions,
+  PlayRadioOptions,
+  PlayStationOptions,
+} from "synxed-sdk";
+```
+
+---
+
+## PlayerState
+
+Represents a complete snapshot of the player at a given moment in time. You receive this object on every `stateChange` event, and you can use it to drive your entire playback UI from a single reactive source of truth.
+
+```typescript
+interface PlayerState {
+  status: "idle" | "loading" | "playing" | "paused" | "error";
+  currentTrack: TrackInfo | null;
+  currentTime: number;
+  duration: number;
+  volume: number;
+}
+```
+
+<ResponseField name="status" type='"idle" | "loading" | "playing" | "paused" | "error"' required>
+  The current lifecycle state of the player.
+
+  | Value | Meaning |
+  |---|---|
+  | `"idle"` | No source has been loaded yet. This is the initial state on construction. |
+  | `"loading"` | A play call has been issued and the SDK is negotiating a session or buffering audio. |
+  | `"playing"` | Audio is actively playing. |
+  | `"paused"` | Playback is paused; the current position is preserved. |
+  | `"error"` | A terminal error has occurred. Inspect the `error` event for details. |
+</ResponseField>
+
+<ResponseField name="currentTrack" type="TrackInfo | null" required>
+  Metadata for the track that is currently loaded. `null` when no track is
+  active (i.e. `status` is `"idle"` or the track metadata has not yet arrived).
+</ResponseField>
+
+<ResponseField name="currentTime" type="number" required>
+  The current playback position in milliseconds. Updates continuously during
+  playback via `timeUpdate` events; also reflected here on each `stateChange`.
+</ResponseField>
+
+<ResponseField name="duration" type="number" required>
+  The total duration of the current track in milliseconds. May be `0` while
+  the track is loading or when streaming live radio (unbounded duration).
+</ResponseField>
+
+<ResponseField name="volume" type="number" required>
+  The current volume level, expressed as a number between `0` (silent) and `1`
+  (full volume). Reflects the last value set by `player.setVolume()`.
+</ResponseField>
+
+---
+
+## TrackInfo
+
+Describes a single audio track as represented in the Synxed catalog. You receive this type on `trackChange` events, inside `PlayerState.currentTrack`, and in the `TrackInfo[]` array from `queueUpdated` events.
+
+```typescript
+interface TrackInfo {
+  id: string;
+  kind: "catalog" | "internal";
+  title?: string;
+  artist?: string;
+  duration?: number;
+  albumArt?: string;
+}
+```
+
+<ResponseField name="id" type="string" required>
+  The unique identifier for this track within the Synxed system.
+</ResponseField>
+
+<ResponseField name="kind" type='"catalog" | "internal"' required>
+  Indicates the origin of the track.
+
+  | Value | Meaning |
+  |---|---|
+  | `"catalog"` | A licensed track sourced from the Synxed music catalog. |
+  | `"internal"` | A track managed by your own deployment (e.g. custom station content). |
+</ResponseField>
+
+<ResponseField name="title" type="string">
+  The display title of the track. May be `undefined` for tracks where metadata
+  has not yet been resolved or is intentionally withheld.
+</ResponseField>
+
+<ResponseField name="artist" type="string">
+  The display name of the performing artist. May be `undefined` in the same
+  circumstances as `title`.
+</ResponseField>
+
+<ResponseField name="duration" type="number">
+  The total track duration in milliseconds. `undefined` for live/unbounded
+  streams.
+</ResponseField>
+
+<ResponseField name="albumArt" type="string">
+  A URL pointing to the track's album artwork image. Use this to populate cover
+  art in your player UI. `undefined` when no artwork is available.
+</ResponseField>
+
+---
+
+## PlaySongOptions
+
+Passed to `player.playSong()` to stream a single licensed track.
+
+```typescript
+interface PlaySongOptions {
+  songId: string;
+  listenerId?: string;
+}
+```
+
+<ResponseField name="songId" type="string" required>
+  The unique catalog identifier of the track to play.
+</ResponseField>
+
+<ResponseField name="listenerId" type="string">
+  A stable identifier for the current listener. When provided, the server uses
+  this for playback resumption, licensing attribution, and analytics.
+</ResponseField>
+
+---
+
+## PlayPlaylistOptions
+
+Passed to `player.playPlaylist()` to stream an ordered playlist.
+
+```typescript
+interface PlayPlaylistOptions {
+  playlistCode: string;
+  listenerId?: string;
+}
+```
+
+<ResponseField name="playlistCode" type="string" required>
+  The short alphanumeric code that identifies the playlist, for example
+  `"FOCUS-AM"` or `"CHILL-2024"`.
+</ResponseField>
+
+<ResponseField name="listenerId" type="string">
+  A stable identifier for the current listener.
+</ResponseField>
+
+---
+
+## PlayMixOptions
+
+Passed to `player.playMix()` to stream a curated mix.
+
+```typescript
+interface PlayMixOptions {
+  mixId: string;
+  listenerId?: string;
+}
+```
+
+<ResponseField name="mixId" type="string" required>
+  The unique identifier of the mix. Use the
+  [`fetchMixes`](/reference/discovery-helpers#fetchmixes) helper to discover
+  available mix IDs at runtime.
+</ResponseField>
+
+<ResponseField name="listenerId" type="string">
+  A stable identifier for the current listener.
+</ResponseField>
+
+---
+
+## PlayRadioOptions
+
+Passed to `player.playRadio()` to tune into the live radio broadcast. All
+fields are optional; you can call `player.playRadio()` with no arguments.
+
+```typescript
+interface PlayRadioOptions {
+  listenerId?: string;
+}
+```
+
+<ResponseField name="listenerId" type="string">
+  A stable identifier for the current listener.
+</ResponseField>
+
+---
+
+## PlayStationOptions
+
+Passed to `player.playStation()` to stream a specific radio station.
+
+```typescript
+interface PlayStationOptions {
+  stationId: string;
+  listenerId?: string;
+}
+```
+
+<ResponseField name="stationId" type="string" required>
+  The unique identifier of the station to play. Use
+  [`fetchStations`](/reference/discovery-helpers#fetchstations) to retrieve
+  available station IDs and their live status.
+</ResponseField>
+
+<ResponseField name="listenerId" type="string">
+  A stable identifier for the current listener.
+</ResponseField>
