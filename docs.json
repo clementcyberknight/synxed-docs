@@ -1,13 +1,16 @@
 {
   "$schema": "https://mintlify.com/docs.json",
   "name": "Synxed",
-  "theme": "luma",
+  "theme": "aspen",
   "colors": {
     "primary": "#ef7025",
     "light": "#eec9bc",
     "dark": "#4fa1ab"
   },
-  "favicon": "/favicon.svg",
+  "favicon": {
+    "light": "/images/favicon.ico",
+    "dark": "/favicon.svg"
+  },
   "navigation": {
     "tabs": [
       {
@@ -87,5 +90,9 @@
       "label": "Get API Key",
       "href": "https://portal.synxed.com"
     }
+  },
+  "logo": {
+    "light": "/images/logo.png",
+    "dark": "/images/logo.png"
   }
 }
